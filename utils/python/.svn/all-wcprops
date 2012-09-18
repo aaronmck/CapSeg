@@ -1,0 +1,53 @@
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/CancerGenomeAnalysis/!svn/ver/42931/trunk/R/CapSeg/utils/python
+END
+convert_to_firehose_names.py
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/CancerGenomeAnalysis/!svn/ver/40681/trunk/R/CapSeg/utils/python/convert_to_firehose_names.py
+END
+sample_handler.py
+K 25
+svn:wc:ra_dav:version-url
+V 82
+/CancerGenomeAnalysis/!svn/ver/42492/trunk/R/CapSeg/utils/python/sample_handler.py
+END
+driver_script.py
+K 25
+svn:wc:ra_dav:version-url
+V 81
+/CancerGenomeAnalysis/!svn/ver/42931/trunk/R/CapSeg/utils/python/driver_script.py
+END
+utils.py
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/CancerGenomeAnalysis/!svn/ver/41383/trunk/R/CapSeg/utils/python/utils.py
+END
+aggregate_coverage.py
+K 25
+svn:wc:ra_dav:version-url
+V 86
+/CancerGenomeAnalysis/!svn/ver/42492/trunk/R/CapSeg/utils/python/aggregate_coverage.py
+END
+capseg_utils.py
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/CancerGenomeAnalysis/!svn/ver/42492/trunk/R/CapSeg/utils/python/capseg_utils.py
+END
+preprocess.py
+K 25
+svn:wc:ra_dav:version-url
+V 78
+/CancerGenomeAnalysis/!svn/ver/41388/trunk/R/CapSeg/utils/python/preprocess.py
+END
+get_reference_gc.py
+K 25
+svn:wc:ra_dav:version-url
+V 84
+/CancerGenomeAnalysis/!svn/ver/41383/trunk/R/CapSeg/utils/python/get_reference_gc.py
+END

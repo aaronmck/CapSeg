@@ -1,0 +1,10 @@
+Package: CapSeg
+Type: Package
+Title: CapSeg, a tool for capture based segmentation and copy number analysis of exome capture samples
+Version: 1.0
+Date: 2012-03-19
+Author: Aaron McKenna
+Maintainer: Aaron McKenna <aaron@broadinstitute.org>
+Description: CapSeg, a tools for capture based segmentation and copy number analysis.
+License: MIT License
+LazyLoad: yes

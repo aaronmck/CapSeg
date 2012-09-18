@@ -1,0 +1,41 @@
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/CancerGenomeAnalysis/!svn/ver/45251/trunk/R/CapSeg/R
+END
+genomic_plot.R
+K 25
+svn:wc:ra_dav:version-url
+V 68
+/CancerGenomeAnalysis/!svn/ver/42926/trunk/R/CapSeg/R/genomic_plot.R
+END
+tangent_normalize.R
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/CancerGenomeAnalysis/!svn/ver/45251/trunk/R/CapSeg/R/tangent_normalize.R
+END
+extract_bait_data.R
+K 25
+svn:wc:ra_dav:version-url
+V 73
+/CancerGenomeAnalysis/!svn/ver/42926/trunk/R/CapSeg/R/extract_bait_data.R
+END
+proportional_coverage.R
+K 25
+svn:wc:ra_dav:version-url
+V 77
+/CancerGenomeAnalysis/!svn/ver/43670/trunk/R/CapSeg/R/proportional_coverage.R
+END
+command_line_utils.R
+K 25
+svn:wc:ra_dav:version-url
+V 74
+/CancerGenomeAnalysis/!svn/ver/37401/trunk/R/CapSeg/R/command_line_utils.R
+END
+individual_segmentation.R
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/CancerGenomeAnalysis/!svn/ver/41383/trunk/R/CapSeg/R/individual_segmentation.R
+END

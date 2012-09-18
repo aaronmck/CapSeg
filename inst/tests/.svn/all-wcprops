@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/CancerGenomeAnalysis/!svn/ver/40889/trunk/R/CapSeg/inst/tests
+END
+test_tangent_normalize.R
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/CancerGenomeAnalysis/!svn/ver/37401/trunk/R/CapSeg/inst/tests/test_tangent_normalize.R
+END
+performance_test_samples_vrs_lane_pulldown.R
+K 25
+svn:wc:ra_dav:version-url
+V 107
+/CancerGenomeAnalysis/!svn/ver/37401/trunk/R/CapSeg/inst/tests/performance_test_samples_vrs_lane_pulldown.R
+END
+test_extract_bait_data.R
+K 25
+svn:wc:ra_dav:version-url
+V 87
+/CancerGenomeAnalysis/!svn/ver/37401/trunk/R/CapSeg/inst/tests/test_extract_bait_data.R
+END
+test_command_line_utils.R
+K 25
+svn:wc:ra_dav:version-url
+V 88
+/CancerGenomeAnalysis/!svn/ver/37401/trunk/R/CapSeg/inst/tests/test_command_line_utils.R
+END

@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/CancerGenomeAnalysis/!svn/ver/40570/trunk/R/CapSeg/setup
+END
+firehose_to_capseg_setup.py
+K 25
+svn:wc:ra_dav:version-url
+V 85
+/CancerGenomeAnalysis/!svn/ver/40567/trunk/R/CapSeg/setup/firehose_to_capseg_setup.py
+END
+FirehoseConnection.py
+K 25
+svn:wc:ra_dav:version-url
+V 79
+/CancerGenomeAnalysis/!svn/ver/40570/trunk/R/CapSeg/setup/FirehoseConnection.py
+END

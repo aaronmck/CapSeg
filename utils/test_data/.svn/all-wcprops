@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 67
+/CancerGenomeAnalysis/!svn/ver/39543/trunk/R/CapSeg/utils/test_data
+END
+fakeLanesToSamples.txt
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/CancerGenomeAnalysis/!svn/ver/39543/trunk/R/CapSeg/utils/test_data/fakeLanesToSamples.txt
+END
+coverage.tsv
+K 25
+svn:wc:ra_dav:version-url
+V 80
+/CancerGenomeAnalysis/!svn/ver/39543/trunk/R/CapSeg/utils/test_data/coverage.tsv
+END
