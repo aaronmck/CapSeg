@@ -34,17 +34,20 @@ option.list <- list(
 )
 opt <- parse_args(OptionParser(option_list=option.list))
 
-
 # get the libraries and R code we rely on
-
 library("plyr")
 library("entropy")
 library("corpcor")
+
+# make sure that we don't check names when we load up matrices - this replaces special characters with dots, which causes
+# a lot of problems
 options(check.names=F)
 
 # now source the path to some of our utilities
 wes.working.dir = opt$script.dir
 source(paste(wes.working.dir,"/R/extract_bait_data.R",sep="")) #,verbose=T)
+source(paste(wes.working.dir,"/R/data_loading.R",sep="")) #,verbose=T)
+source(paste(wes.working.dir,"/R/output_data.R",sep="")) #,verbose=T)
 source(paste(wes.working.dir,"/R/command_line_utils.R",sep="")) #,verbose=T)
 source(paste(wes.working.dir,"/R/genomic_plot.R",sep="")) #,verbose=T)
 source(paste(wes.working.dir,"/R/debug_functions.R",sep="")) #,verbose=T)

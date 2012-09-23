@@ -26,7 +26,6 @@ opt <- parse_args(OptionParser(option_list=option_list))
 
 source(paste(opt$r.dir,"/R/genomic_plot.R",sep="")) #,verbose=T)
 
-
 # load the arguments
 bam.name = opt$bam.file.name
 bam.to.sample.file = opt$bam.to.sample.file
