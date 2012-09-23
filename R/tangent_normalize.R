@@ -80,7 +80,6 @@ signal.files                                    <- args$signal.files
 histo.data                                      <- toupper(args$histo.data) == "TRUE"
 debug                                           <- toupper(args$debug) == "TRUE"
 
-
 # some constants to use
 removeBadBaitsAndLanes = T # TRUE
 optimize.bf = F # optimize those baits!
@@ -89,8 +88,6 @@ calibrate.against.others = T
 # our epsilon value - used to make sure we're not producing log(0) calls
 epsilon <- .Machine$double.eps * 10^6
 # options(error=dump.frames)
-
-
 
 # create the output directory and the cache directory if needed, and setup some debug logging locations (used only if debug == T)
 dir.create(output.location,recursive=T)

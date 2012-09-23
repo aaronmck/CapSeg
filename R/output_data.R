@@ -1,4 +1,3 @@
-
 #' output and plot the data
 #' @param tumor.matrix the post calibrated tumor matrix data
 #' @param tumors.cr the pre-calibrated, log2 normalized CR data for the tumor
