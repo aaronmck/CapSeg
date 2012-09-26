@@ -34,15 +34,12 @@ option_list <- list(
                     make_option(c("--output.file"),help="the output file of proportional coverage",default="./"),
                     make_option(c("--output.cr.stat.file"),help="the output file of the cr.stats for each lane",default="./"),
                     make_option(c("--output.column.sums"),help="the column sums output",default="./"),
-                    make_option(c("--input.file"),help="the input file of coverage",default="./"),
-					make_option(c("--scripts.dir"),help="where to source the other script files from",default="./")
+                    make_option(c("--input.file"),help="the input file of coverage",default="./")
                     )
 
 # add the options
 opt <- parse_args(OptionParser(option_list=option_list))
 #save.image(".parameters.pc.Rdata")
-
-# source(paste(opt$scripts.dir,"/R/genomic_plot.R",sep="")) #,verbose=T)
 
 # load the coverage
 print(paste("Loading file",opt$input.file,"from disk"))
@@ -56,18 +53,6 @@ colnames(intervals) <- c("contig","start","stop","names")
 # this is very contrived, but it saves a ton of time over merge
 input <- merge(intervals,input,by.x="names",by.y="row.names",all.x = T,sort=F)
 
-print(paste(colnames(input)))
-# plot the data
-# [1] "names"   "contig"  "start"   "stop"    "B00TW.1"
-	png(file="sample.png",width=1000,height=500)
-	imp <- input[,5:ncol(input)]
-	imp[is.na(imp)] = 1
-	imp <- apply(imp,1,sum)
-	imp <- imp/sum(imp)
-	imp <- imp/median(imp)
-	print(summary(imp))
-	plot_genome_data(input$contig,input$start,input$stop,log2(imp),colnames(input)[5],segs=NA,is.hg18=TRUE,max.plot=3.0)
-	dev.off()
 input <- data.frame(input[,5:ncol(input)])
 colnames(input) <- input.colnames
 rownames(input) <- intervals$names
