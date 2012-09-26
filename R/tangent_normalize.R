@@ -29,14 +29,13 @@ option.list <- list(
                 make_option(c("--bait.factor"),help="the bait factor data file",default="blank"),
                 make_option(c("--bam.file.listing"),help="the listing of bam files, by tumor and by normal",default="blank"),
                 make_option(c("--signal.files"),help="the sample name to signal file",default="blank"),
-                make_option(c("--histo.data"),help="should we use historical data?",default="blank")
+                make_option(c("--histo.data"),help="should we use historical data",default="blank"),
                make_option(c("--debug"),help="dumb lots of debugging data to the <output_dir>/debug directory",default="blank")
 )
 opt <- parse_args(OptionParser(option_list=option.list))
 
 # get the libraries and R code we rely on
 library("plyr")
-library("entropy")
 library("corpcor")
 
 # make sure that we don't check names when we load up matrices - this replaces special characters with dots, which causes
@@ -45,12 +44,11 @@ options(check.names=F)
 
 # now source the path to some of our utilities
 wes.working.dir = opt$script.dir
-source(paste(wes.working.dir,"/R/extract_bait_data.R",sep="")) #,verbose=T)
 source(paste(wes.working.dir,"/R/data_loading.R",sep="")) #,verbose=T)
 source(paste(wes.working.dir,"/R/output_data.R",sep="")) #,verbose=T)
 source(paste(wes.working.dir,"/R/command_line_utils.R",sep="")) #,verbose=T)
 source(paste(wes.working.dir,"/R/genomic_plot.R",sep="")) #,verbose=T)
-source(paste(wes.working.dir,"/R/debug_functions.R",sep="")) #,verbose=T)
+source(paste(wes.working.dir,"/R/data_transformations.R",sep="")) #,verbose=T)
 
 # post process the file
 args <- post.process.commandline(opt)
