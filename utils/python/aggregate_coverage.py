@@ -73,7 +73,6 @@ for line in target_file:
     target_pos.append(str(sp[0] + "\t" + sp[1] + "\t" + sp[2]))
 bait_factors = []
 bait_factor_names = []
-      print sample
 
 # preprocess the normals
 bait_factors = process_bait_factors(targets,normals,"stats_file.txt",target_pos)
