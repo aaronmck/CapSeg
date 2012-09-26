@@ -42,7 +42,7 @@ option_list <- list(
 opt <- parse_args(OptionParser(option_list=option_list))
 #save.image(".parameters.pc.Rdata")
 
-source(paste(opt$scripts.dir,"/R/genomic_plot.R",sep="")) #,verbose=T)
+# source(paste(opt$scripts.dir,"/R/genomic_plot.R",sep="")) #,verbose=T)
 
 # load the coverage
 print(paste("Loading file",opt$input.file,"from disk"))
@@ -58,7 +58,7 @@ input <- merge(intervals,input,by.x="names",by.y="row.names",all.x = T,sort=F)
 
 print(paste(colnames(input)))
 # plot the data
-# [1] "names"   "contig"  "start"   "stop"    "B00TW.1" 
+# [1] "names"   "contig"  "start"   "stop"    "B00TW.1"
 	png(file="sample.png",width=1000,height=500)
 	imp <- input[,5:ncol(input)]
 	imp[is.na(imp)] = 1
