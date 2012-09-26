@@ -112,10 +112,6 @@ baits <- data.frame(baits[!duplicated(baits$name),])
 # load the big data data - the csv files of coverage; let the user know how long this is taking
 if (debug) print(paste("Starting to load the data at",format(Sys.time(), "%a %b %d %H:%M:%S %Y")))
 
-# create the output directory and the cache directory if needed
-dir.create(output.location,recursive=T)
-dir.create(cached.location,recursive=T)
-
 tumor.data <- load.exome.data(tumor.lane.data)
 normal.data <- load.exome.data(normal.lane.data)
 
