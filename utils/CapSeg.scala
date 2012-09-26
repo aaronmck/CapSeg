@@ -91,7 +91,7 @@ class CapSeg extends QScript {
   def script = {
     // this is because of Firehose - we have to take in string boolean parameters and convert to the Boolean type inside of this script
     var useHistData = false
-    if (useHistoricalData.toUpperCase().equals("TRUE"))
+    if (useHistoricalData != null && useHistoricalData.toUpperCase().equals("TRUE"))
       useHistData = true
 
     // load up the samples
