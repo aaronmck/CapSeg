@@ -35,7 +35,13 @@ class CoverageManager:
         return self.tag
 
     def set_lanes_to_use(self,cr_cutoff,keep_min_percent=50,debugging=False):
-        '''given the CR stat cutoff, figure out wgat lanes to drop'''
+        '''
+        given the CR stat cutoff, figure out which lanes to drop -- the logic here is that we'd like to throw away every lane
+        that has a CR stat below the threshold UNLESS we don't have enough lanes to make up the sample.  Then we're forced to
+        take bad lanes, so we take enough from the best rejects to get the minimum number.
+
+        the prereq. is that the cr_stats object has been filled in
+        '''
         self.use_lane = [False]*len(self.cr_stats)
         val = []
         for i in range(0,len(self.cr_stats)):
