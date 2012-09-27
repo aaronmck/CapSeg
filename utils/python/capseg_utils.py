@@ -69,17 +69,19 @@ def process_output(output_file,bait_factors,baits_to_keep,coverage_managers,targ
         target = targets[i]
         output_values = []
         bf = bait_factors[i]
-
+        print "target " + target + " bf " + bait_factor
         for sample,cov_manager in coverage_managers.iteritems():
             if cov_manager.get_current_tag() == target:
                 output_values.append(cov_manager.get_output_value(bf,target))
+                print cov_manager.get_output_value(bf,target)
+                print "\t".join([str(t) for t in cov_manager.get_coverage()])
                 cov_manager.next()
             else:
                 print "missing coverage for target " + target + " in sample " + sample + " at index " + str(processed)
                 output_values.append(0)
 
-        #if i < 100:
-            #print str(i) + " target " + target + " bf " + str(bf) + " values " +  "_".join([str(t) for t in output_values])
+        if i < 50:
+            return
         if not baits_to_keep.has_key(target):
             continue
 
