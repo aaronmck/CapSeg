@@ -81,7 +81,7 @@ def process_output(output_file,bait_factors,baits_to_keep,coverage_managers,targ
             continue
 
         processed += 1
-        if processed % 10000 == 0:
+        if processed % 20000 == 0:
             print "Processed " + str(processed) + " sites"
         output.write(target + "\t")
         output.write("\t".join([str(s) for s in output_values]) + "\n")
