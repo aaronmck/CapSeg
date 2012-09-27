@@ -65,7 +65,6 @@ class CoverageManager:
             trues += 1
             ind += 1
         print "using " + str(trues) + " of " + str(len(self.header)) + " lanes for sample " + self.cov_file
-        self.use_lane = [True]*len(self.cr_stats)
 
     def good_lane_count(self):
         '''return the count of the number of lanes we've kept'''

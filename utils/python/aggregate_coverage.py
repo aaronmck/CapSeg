@@ -90,7 +90,7 @@ bait_factors_output_debug.write("bait_factor\tkept\n")
 for i in range(0,len(bait_factors)):
     if bait_factors[i] >= bf_cutoff_low: #  and bait_factors[i] <= bf_cutoff_high:
         bait_factors_output.write(targets[i] + "\t" + str(bait_factors[i]) + "\n")
-    baits_to_keep[targets[i]] = True
+        baits_to_keep[targets[i]] = True
     bait_factors_output_debug.write(targets[i] + "\t" + str(bait_factors[i]) + "\t" + str(bait_factors[i] >= bf_cutoff_low) + "\n" )
 
 normals = load_up_tn_entries(args.normal)
