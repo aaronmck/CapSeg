@@ -80,6 +80,8 @@ def process_output(output_file,bait_factors,baits_to_keep,coverage_managers,targ
                 print "missing coverage for target " + target + " in sample " + sample + " at index " + str(processed)
                 output_values.append(0)
 
+        if i < 100:
+            print str(i) + " target " + target + " bf " + str(bf) + "_".join([str(t) for t in output_values])
         if not baits_to_keep.has_key(target):
             continue
 
