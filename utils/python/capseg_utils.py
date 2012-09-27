@@ -37,9 +37,11 @@ def process_bait_factors(targets,coverage_managers,stats_filename,target_pos):
         for sample,cov_manager in coverage_managers.iteritems():
             if cov_manager.get_current_tag() == target:
                 coverage.extend(cov_manager.get_coverage())
+                cov_manager.next()
             else:
                 coverage.extend([0]*cov_manager.good_lane_count())
-            cov_manager.next()
+                print "missing coverage for target " + target + " in sample " + sample + " at index " + str(index)
+
         # calculate a couple of statistics on each bait
         bf = numpy.median(coverage)
         entropy = stats.distributions.entropy(coverage)
