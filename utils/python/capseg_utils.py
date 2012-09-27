@@ -74,6 +74,7 @@ def process_output(output_file,bait_factors,baits_to_keep,coverage_managers,targ
                 output_values.append(cov_manager.get_output_value(bf,target))
                 cov_manager.next()
             else:
+                print "missing coverage for target " + target + " in sample " + sample + " at index " + str(processed)
                 output_values.append(0)
 
         if not baits_to_keep.has_key(target):
