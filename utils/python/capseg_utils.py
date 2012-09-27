@@ -66,6 +66,7 @@ def process_output(output_file,bait_factors,baits_to_keep,coverage_managers,targ
     processed = 0
     print "bf length = " + str(len(bait_factors))
     print "target length = " + str(len(targets))
+    print "target length = " + str(len(baits_to_keep))
     for i in range(0,len(targets)):
         target = targets[i]
         output_values = []
