@@ -1,4 +1,8 @@
 import numpy
+import mmap
+import contextlib
+
+
 '''
 The CoverageManager class
 
@@ -7,7 +11,7 @@ along with the CR stat.
 
 '''
 class CoverageManager:
-    def __init__(self,coverage_file,cr_stat_file,column_sums,tumor):
+    def __init__(self,coverage_file,cr_stat_file,tumor):
         self.cov_file = coverage_file
         self.cr_file = cr_stat_file
         self.tumor = tumor
@@ -22,8 +26,9 @@ class CoverageManager:
             sp = line.strip().split()
             self.cr_stats.append(float(sp[1]))
 
-        # setup the buffer of lines
-        self.cov_buffer = open(self.cov_file)
+        # setup the buffer of lines as a memory mapped file for speed (I hope)
+        self.cov_buffer = open(self.cov_file,"r")
+
         self.header = self.cov_buffer.readline().strip().split("\t")
 
         # load the initial coverage from the first entry in the coverage file
@@ -82,26 +87,31 @@ class CoverageManager:
                 ret.append(self.coverage[i])
         return ret
 
-    def get_output_value(self,bait_factor,target):
+    def get_output_value(self,bait_factor):
         '''get the output values (the values, divided by the column sum, calibrated (divided) by the bait factor'''
         ret = []
-        # print "bait factor " + str(bait_factor)
         for i in range(0,len(self.coverage)):
             if self.use_lane[i]:
                 ret.append(self.coverage[i]/bait_factor)
-        med = ret[0]
-        # the median code doesn't like lengths of [0-1) so we might as well save time and check for [0-1]
-        if len(ret) > 1:
-            med = numpy.median(ret)
-            #print target
-            #print self.tag
-            #print "tot = " + "\t".join([str(r) for r in self.coverage])
-            #print "sample " + self.cov_file + "\t" + "\t".join([str(r) for r in ret]) + " med " + str(med)
-        return med
+        
+        # check that we have at least one value
+        if len(ret) <= 0:
+            return None
+        elif len(ret) == 1:
+            return ret[0]
+        else:
+            return numpy.median(ret)
 
     def next(self):
         self.line = self.cov_buffer.readline()
-        sp = self.line.strip().split("\t")
+        if not self.line:
+            self.tag = None
+            self.coverage = []
+        sp = self.line.strip("\n").split("\t")
         self.tag = sp[0]
         self.coverage = [float(s) for s in sp[1:(len(sp))]]
 
+    def has_data(self):
+        if self.tag != None:
+            return True
+        return False
