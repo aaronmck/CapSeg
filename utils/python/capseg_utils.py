@@ -24,8 +24,10 @@ def load_up_tn_entries(fl):
 
 # --------------------------------------------------------------
 # process the bait factor values
-def process_bait_factors(targets,coverage_managers,stats_filename,target_pos):
-    stats_file = open(stats_filename,"w")
+def process_bait_factors(targets,coverage_managers,stats_filename,target_pos,debugging=False):
+    stats_file = None
+    if debugging:
+        stats_file = open(stats_filename,"w")
     header_written = False
     lanes = []
     bait_factors = []
@@ -45,7 +47,8 @@ def process_bait_factors(targets,coverage_managers,stats_filename,target_pos):
                 print "missing coverage for target " + target + " in sample " + sample + " at index " + str(index)
 
         if not header_written:
-            stats_file.write("target\tbf\tentropy\tvar\tcontig\tstart\tstop\t" + "\t".join(lanes) + "\n")
+            if debugging:
+                stats_file.write("target\tbf\tentropy\tvar\tcontig\tstart\tstop\t" + "\t".join(lanes) + "\n")
             header_written = True
         # calculate a couple of statistics on each bait
         bf = numpy.median(coverage)
@@ -54,13 +57,15 @@ def process_bait_factors(targets,coverage_managers,stats_filename,target_pos):
         variance = numpy.var([s/sm for s in coverage])
 
         # write to the stat file
-        stats_file.write(target + "\t" + str(bf) + "\t" + str(entropy) + "\t" + str(variance) + "\t" + target_pos[index] + "\t" + "\t".join([str(s) for s in coverage]) + "\n")
+        if debugging:
+            stats_file.write(target + "\t" + str(bf) + "\t" + str(entropy) + "\t" + str(variance) + "\t" + target_pos[index] + "\t" + "\t".join([str(s) for s in coverage]) + "\n")
         index += 1
         bait_factors.append(bf)
         processed += 1
         if processed % 10000 == 0:
             print "Preprocessed " + str(processed) + " sites"
-    stats_file.close()
+    if not stats_file == None:
+        stats_file.close()
     return bait_factors
 
 # --------------------------------------------------------------
