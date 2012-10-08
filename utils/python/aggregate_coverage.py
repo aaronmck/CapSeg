@@ -59,8 +59,8 @@ for vals in tumors.values():
 normal_cutoff = stats.scoreatpercentile(cr_stats_normals,80)
 
 # now tell each lane we've collected the CR stat cutoff to use
-[cov.set_lanes_to_use(normal_cutoff,debugging=True) for cov in normals.values()]
-[cov.set_lanes_to_use(normal_cutoff,debugging=True) for cov in tumors.values()]
+[cov.set_lanes_to_use(normal_cutoff,debugging=False) for cov in normals.values()]
+[cov.set_lanes_to_use(normal_cutoff,debugging=False) for cov in tumors.values()]
 
 print "getting the target names..."
 target_file = open(args.intervals)

@@ -13,21 +13,6 @@
 library(optparse)
 options(stringsAsFactors=F)
 
-load.integer.data = function(data) {
-
-  # this next part is a bit hacky, but its a speedup and a huge memory win over the default read.csv
-  #line.count = as.numeric(system(paste("wc -l",data,"| cut -f 1 -d ' '"),intern = TRUE))
-  #col.count = as.numeric(system(paste("head -1",data,"| tr '\t' '\n' | wc -l"),intern = TRUE))
-
-  # load up the raw data - there shouldn't be duplicate row names anymore
-  raw <- read.delim(data,
-                    header=TRUE,
-                    stringsAsFactors=F,
-                    check.names=F)
-
-  return(raw)
-}
-
 option_list <- list(
                     # we include the R dat files from
                     make_option(c("--intervals"),help="the input file of targets we pulled coverage for (bed file)",default="./"),
@@ -68,7 +53,7 @@ write.table(clSums,file=opt$output.column.sums,sep="\t",quote=F)
 
 write.table(input,file=paste(opt$output.file,"midway",sep="."),sep="\t",quote=F)
 # calculate the copy ratio stats for each lane
-input = sweep(input,2,colSums(input),"/")
+input.stat = sweep(input,2,colSums(input),"/")
 
 cr.stat <- data.frame(apply(input,2,function(x) {median(abs(diff(x)))}))
 colnames(cr.stat) <- c("cr.stat")

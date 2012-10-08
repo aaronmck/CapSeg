@@ -121,23 +121,26 @@ if (debug) print(paste("Intersecting the normal and tumor bait lists, normal dat
 target.intersect <- intersect(rownames(normal.data),rownames(tumor.data))
 if (debug) print(paste("intersection of the tumor and normal has ",length(target.intersect),"rows"))
 
-normal.data <- normalize.tumor.normal.targets(normal.data,target.intersect)
-tumor.data <- normalize.tumor.normal.targets(tumor.data,target.intersect)
+normal.data <- intersect.tumor.normal.targets(normal.data,target.intersect)
+tumor.data <- intersect.tumor.normal.targets(tumor.data,target.intersect)
 
 # load up our bait factor
 bait.factor <- read.delim(bait.factor.file)
 bait.factor[bait.factor[,1]<=0,2] = epsilon
 bait.factor = bait.factor[is.element(rownames(bait.factor),rownames(tumor.data)),]
 
+# mean center the tumor and normal samples
+tumor.data = sweep(tumor.data,2,apply(tumor.data,2,mean),"/")
+
 td.mean = apply(tumor.data,2,mean)
 tumor.data = tumor.data / td.mean
 tumor.data[abs(tumor.data) < epsilon] = epsilon
 log.tumors = data.frame(log2(tumor.data))
 
-nd.mean = apply(normal.data,2,mean)
-normal.data = normal.data / nd.mean
+normal.data = sweep(normal.data,2,apply(normal.data,2,mean),"/")
 normal.data[abs(normal.data) < epsilon] = epsilon
 log.normals = data.frame(log2(normal.data))
+
 
 # do the initial block normalization
 bgs.center = rep(mean(colMeans(log.normals)),nrow(log.normals)) # rep(0.0,nrow(normal.data)) # log.normals[,ncol(log.normals)] # rep(0.0,nrow(normal.data))
@@ -155,8 +158,8 @@ if (histo.data) {
 target.intersect <- intersect(rownames(log.normals),rownames(log.tumors))
 print(dim(log.normals))
 print(dim(log.tumors))
-log.normals <- normalize.tumor.normal.targets(log.normals,target.intersect)
-log.tumors <- normalize.tumor.normal.targets(log.tumors,target.intersect)
+log.normals <- intersect.tumor.normal.targets(log.normals,target.intersect)
+log.tumors <- intersect.tumor.normal.targets(log.tumors,target.intersect)
 
 print("About to perform the SVD (PI)")
 pseudo.inverse.norm  <- pseudoinverse(data.matrix(log.normals))

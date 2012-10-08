@@ -18,7 +18,7 @@ def load_up_tn_entries(fl):
     for line in tn_files:
         sp = line.strip().split("\t")
         print sp[0] + ",",
-        ret[sp[0]]=CoverageManager(sp[1],sp[2],sp[3],True)
+        ret[sp[0]]=CoverageManager(sp[1],sp[2],True)
     print "done loading file: " + fl
     return ret
 
@@ -36,7 +36,7 @@ def process_bait_factors(targets,coverage_managers,stats_filename,target_pos):
         # for the given target, ask the coverage manager for the coverage for this sample
         for sample,cov_manager in coverage_managers.iteritems():
             if cov_manager.get_current_tag() == target:
-                coverage.extend(cov_manager.get_coverage())
+                coverage.extend(cov_manager.get_coverage(target))
                 cov_manager.next()
             else:
                 coverage.extend([0]*cov_manager.good_lane_count())
@@ -69,19 +69,18 @@ def process_output(output_file,bait_factors,baits_to_keep,coverage_managers,targ
         target = targets[i]
         output_values = []
         bf = bait_factors[i]
-        print "target " + target + " bf " + bait_factor
         for sample,cov_manager in coverage_managers.iteritems():
             if cov_manager.get_current_tag() == target:
                 output_values.append(cov_manager.get_output_value(bf,target))
-                print cov_manager.get_output_value(bf,target)
-                print "\t".join([str(t) for t in cov_manager.get_coverage()])
+                # check that the coverage is the same
+                if cov_manager.tag != target:
+                    print "Tag " + target + " was what we were looking for, but we got " + cov_manager.tag
+
                 cov_manager.next()
             else:
                 print "missing coverage for target " + target + " in sample " + sample + " at index " + str(processed)
                 output_values.append(0)
 
-        if i < 50:
-            return
         if not baits_to_keep.has_key(target):
             continue
 

@@ -21,7 +21,7 @@ class CoverageManager:
 
         stf = open(self.cr_file)
         header = stf.readline()
-        print self.cr_file
+
         for line in stf:
             sp = line.strip().split()
             self.cr_stats.append(float(sp[1]))
@@ -33,6 +33,7 @@ class CoverageManager:
 
         # load the initial coverage from the first entry in the coverage file
         self.tag = "UNKNOWN"
+        self.line_number = 0
         self.next()
 
     def get_current_tag(self):
@@ -69,6 +70,7 @@ class CoverageManager:
             self.use_lane[val[ind][0]] = True
             trues += 1
             ind += 1
+        self.use_lane = [True]*len(self.cr_stats) # remove after testing
         print "using " + str(trues) + " of " + str(len(self.header)) + " lanes for sample " + self.cov_file
 
     def good_lane_count(self):
@@ -79,7 +81,10 @@ class CoverageManager:
                 cnt += 1
         return cnt
 
-    def get_coverage(self):
+    def get_coverage(self,target):
+        if target != self.tag:
+            raise NameError("Tags are out of sync; we expected " + self.tag + " but we were requested coverage for tag " + target)
+
         ''' get the raw coverage for this lane (for kept lanes)'''
         ret = []
         for i in range(0,len(self.coverage)):
@@ -87,13 +92,16 @@ class CoverageManager:
                 ret.append(self.coverage[i])
         return ret
 
-    def get_output_value(self,bait_factor):
+    def get_output_value(self,bait_factor,target):
         '''get the output values (the values, divided by the column sum, calibrated (divided) by the bait factor'''
+        if target != self.tag:
+            raise NameError("Tags are out of sync; we expected " + self.tag + " but we were requested coverage for tag " + target)
+
         ret = []
         for i in range(0,len(self.coverage)):
             if self.use_lane[i]:
                 ret.append(self.coverage[i]/bait_factor)
-        
+
         # check that we have at least one value
         if len(ret) <= 0:
             return None
@@ -109,7 +117,13 @@ class CoverageManager:
             self.coverage = []
         sp = self.line.strip("\n").split("\t")
         self.tag = sp[0]
+
         self.coverage = [float(s) for s in sp[1:(len(sp))]]
+        self.line_number += 1
+        if len(self.coverage) != len(self.header):
+            self.tag = None
+            self.coverage = []
+            #raise NameError("Sizes don't match; line \"" + self.line + "\" with size " + str(len(self.line)) + " (line " + str(self.line_number) + " ) doesn't have " + str(len(self.header)) + " tokens  for file " + self.cov_file)
 
     def has_data(self):
         if self.tag != None:

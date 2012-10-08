@@ -4,7 +4,7 @@
 #' @return the pseudo inverse (in log 2 space) of the normal matrix
 #' @keywords exome coverage tangent pseudo inverse
 #'
-normalize.tumor.normal.targets = function(normal.data,intersecting.baits) {
+intersect.tumor.normal.targets = function(normal.data,intersecting.baits) {
   rn <- rownames(normal.data)
   cl <- colnames(normal.data)
   subset = is.element(rownames(normal.data),intersecting.baits)
