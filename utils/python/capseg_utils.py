@@ -48,10 +48,6 @@ def process_bait_factors(targets,coverage_managers,stats_filename,target_pos):
         sm = numpy.sum(coverage)
         variance = numpy.var([s/sm for s in coverage])
 
-        if (target == "bait_34_Lypla1-8"):
-            print "bait_factor: " + str(bf) + " coverage output " + "\t".join([str(x) for x in coverage])
-
-
         # write to the stat file
         stats_file.write(target + "\t" + str(bf) + "\t" + str(entropy) + "\t" + str(variance) + "\t" + target_pos[index] + "\n")
         index += 1
@@ -88,9 +84,6 @@ def process_output(output_file,bait_factors,baits_to_keep,coverage_managers,targ
 
         if not baits_to_keep.has_key(target):
             continue
-
-        if (target == "bait_34_Lypla1-8"):
-            print "bait_factor: " + str(bf) + " coverage output " + "\t".join([str(x) for x in output_values])
 
         processed += 1
         if processed % 20000 == 0:
