@@ -46,7 +46,7 @@ def process_bait_factors(targets,coverage_managers,stats_filename,target_pos):
 
         if not header_written:
             stats_file.write("target\tbf\tentropy\tvar\tcontig\tstart\tstop\t" + "\t".join(lanes) + "\n")
-
+            header_written = True
         # calculate a couple of statistics on each bait
         bf = numpy.median(coverage)
         entropy = stats.distributions.entropy(coverage)
