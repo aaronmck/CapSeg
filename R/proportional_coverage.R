@@ -40,12 +40,12 @@ intervals <- read.delim(opt$intervals,header=F,stringsAsFactors=F)
 colnames(intervals) <- c("contig","start","stop","names")
 
 # this is very contrived, but it saves a ton of time over merge
-#input <- merge(intervals,input,by.x="names",by.y="row.names",all.x = T,sort=F)
+input <- merge(intervals,data.matrix(input),by.x="names",by.y="row.names",all.x = T,sort=F)
 
-#input <- data.frame(input[,5:ncol(input)])
-#colnames(input) <- input.colnames
-#rownames(input) <- intervals$names
-#input[is.na(input)] = 0
+input <- data.frame(input[,5:ncol(input)])
+colnames(input) <- input.colnames
+rownames(input) <- intervals$names
+input[is.na(input)] = 0
 
 # column sums
 clSums = data.frame(colSums(input))
