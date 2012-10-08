@@ -30,7 +30,7 @@ opt <- parse_args(OptionParser(option_list=option_list))
 print(paste("Loading file",opt$input.file,"from disk"))
 
 # figure out the number of columns
-colCount = scan(opt$input.file,sep=',', what="character" , nlines=1 )
+colCount = length(scan(opt$input.file,sep='\t', what="character" , nlines=1 ))
 
 input <- read.delim(opt$input.file,stringsAsFactors=F,check.names=F,colClasses=rep("numeric",colCount))
 input.colnames <- colnames(input)
