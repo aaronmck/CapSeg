@@ -26,8 +26,8 @@ def load_up_tn_entries(fl):
 # process the bait factor values
 def process_bait_factors(targets,coverage_managers,stats_filename,target_pos):
     stats_file = open(stats_filename,"w")
-    stats_file.write("target\tbf\tentropy\tvar\tcontig\tstart\tstop\n")
-
+    header_written = False
+    lanes = []
     bait_factors = []
     index = 0
     processed = 0
@@ -35,12 +35,17 @@ def process_bait_factors(targets,coverage_managers,stats_filename,target_pos):
         coverage = []
         # for the given target, ask the coverage manager for the coverage for this sample
         for sample,cov_manager in coverage_managers.iteritems():
+            if not header_written:
+                lanes.extend(cov_manager.header)
             if cov_manager.get_current_tag() == target:
                 coverage.extend(cov_manager.get_coverage(target))
                 cov_manager.next()
             else:
                 coverage.extend([0]*cov_manager.good_lane_count())
                 print "missing coverage for target " + target + " in sample " + sample + " at index " + str(index)
+
+        if not header_written:
+            stats_file.write("target\tbf\tentropy\tvar\tcontig\tstart\tstop\t" + "\t".join(lanes) + "\n")
 
         # calculate a couple of statistics on each bait
         bf = numpy.median(coverage)
@@ -49,7 +54,7 @@ def process_bait_factors(targets,coverage_managers,stats_filename,target_pos):
         variance = numpy.var([s/sm for s in coverage])
 
         # write to the stat file
-        stats_file.write(target + "\t" + str(bf) + "\t" + str(entropy) + "\t" + str(variance) + "\t" + target_pos[index] + "\n")
+        stats_file.write(target + "\t" + str(bf) + "\t" + str(entropy) + "\t" + str(variance) + "\t" + target_pos[index] + "\t" + [str(s) for s in coverage] + "\n")
         index += 1
         bait_factors.append(bf)
         processed += 1
