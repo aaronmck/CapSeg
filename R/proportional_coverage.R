@@ -62,4 +62,4 @@ colnames(cr.stat) <- c("cr.stat")
 write.table(cr.stat,file=opt$output.cr.stat.file,sep="\t",quote=F,row.names=T)
 
 # output the proportional table
-write.table(input,file=opt$output.file,sep="\t",quote=F)
+write.table(input.stat,file=opt$output.file,sep="\t",quote=F)
