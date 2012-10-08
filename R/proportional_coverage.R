@@ -28,7 +28,7 @@ opt <- parse_args(OptionParser(option_list=option_list))
 
 # load the coverage
 print(paste("Loading file",opt$input.file,"from disk"))
-input <- read.delim(opt$input.file)
+input <- read.delim(opt$input.file,stringsAsFactors=F,check.names=F)
 input.colnames <- colnames(input)
 intervals <- read.delim(opt$intervals,header=F,stringsAsFactors=F)
 
