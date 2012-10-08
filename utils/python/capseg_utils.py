@@ -54,7 +54,7 @@ def process_bait_factors(targets,coverage_managers,stats_filename,target_pos):
         variance = numpy.var([s/sm for s in coverage])
 
         # write to the stat file
-        stats_file.write(target + "\t" + str(bf) + "\t" + str(entropy) + "\t" + str(variance) + "\t" + target_pos[index] + "\t" + [str(s) for s in coverage] + "\n")
+        stats_file.write(target + "\t" + str(bf) + "\t" + str(entropy) + "\t" + str(variance) + "\t" + target_pos[index] + "\t" + "\t".join([str(s) for s in coverage]) + "\n")
         index += 1
         bait_factors.append(bf)
         processed += 1
