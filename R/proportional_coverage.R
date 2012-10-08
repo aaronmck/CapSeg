@@ -43,9 +43,9 @@ colnames(intervals) <- c("contig","start","stop","names")
 #input <- merge(intervals,input,by.x="names",by.y="row.names",all.x = T,sort=F)
 
 #input <- data.frame(input[,5:ncol(input)])
-colnames(input) <- input.colnames
-rownames(input) <- intervals$names
-input[is.na(input)] = 0
+#colnames(input) <- input.colnames
+#rownames(input) <- intervals$names
+#input[is.na(input)] = 0
 
 # column sums
 clSums = data.frame(colSums(input))
