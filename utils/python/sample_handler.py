@@ -119,6 +119,9 @@ class CoverageManager:
         self.tag = sp[0]
 
         self.coverage = [float(s) for s in sp[1:(len(sp))]]
+        if (self.tag == "bait_34_Lypla1-8"):
+            print "sample: " + self.cov_file + " tag: " + self.tag + " coverage " + "\t".join([str(x) for x in self.coverage])
+
         self.line_number += 1
         if len(self.coverage) != len(self.header):
             self.tag = None
