@@ -90,6 +90,7 @@ additional.normals = function(normal.database,our.normals,build.ver,analysis.set
 
     our.normals <- data.frame(our.normals)
     for (file in list.files(normal.database)) {
+        print(paste("looking at file ",file))
         if(!grep("rData",file)) {
             print(paste("Skipping file",file,"since it's not an R data file"))
             next
