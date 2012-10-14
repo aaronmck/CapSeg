@@ -85,7 +85,7 @@ CAPSEG_command += " --baitcsv " + args.intervals_csv + " "
 CAPSEG_command += " -retry 1 -asn "
 CAPSEG_command += args.analysis_name + " -run"
 CAPSEG_command += " -lib " + args.libdir + " -pl"
-CAPSEG_command += " -uhd " + args.uhd
+CAPSEG_command += " -uhd " + args.use_historical_data
 
 print "About to run CAPSEG command: " + CAPSEG_command
 #p = subprocess.Popen(CAPSEG_command, shell=True)
