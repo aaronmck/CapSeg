@@ -73,7 +73,7 @@ if sts != 0:
 # if we're good to go, start off the CAPSEG portion of the run
 CAPSEG_command = "java -Xmx4g -Djava.io.tmpdir=" + args.temp_dir
 CAPSEG_command += " -jar " + args.libdir + "/utils/Queue.jar -S "
-CAPSEG_command += args.libdir + "/utils/CapSeg.scala -III " + preprocessFile
+CAPSEG_command += args.libdir + "/utils/CapSeg.scala -I " + preprocessFile
 CAPSEG_command += " -L " + args.intervals + " -T " + args.intervals_bed
 CAPSEG_command += " --tmpdir " + local_tmp_dir
 CAPSEG_command += " -R " + args.reference
