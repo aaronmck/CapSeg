@@ -6,6 +6,7 @@ import os
 import argparse
 import subprocess
 import shutil
+
 # create the command line arguments
 parser = argparse.ArgumentParser()
 
@@ -31,7 +32,8 @@ parser.add_argument('-temp', '--temp_dir',help="the temp directory",required=Tru
 parser.add_argument('-libdir', '--libdir',help="the library directory",required=True)
 parser.add_argument('-queue', '--queue',help="the queue jar location",required=True)
 parser.add_argument('-short_queue', '--short_queue',help="the temp directory",required=False,default="hour")
-parser.add_argument('-uhd', '--uhd',help="use the historical data (or not)",required=False,default="hour")
+parser.add_argument('-uhd', '--use_historical_data',help="use the historical data (or not)",required=False,default="false")
+parser.add_argument('-ktd', '--keep_temp_data',help="keep the temp data around",required=False,default="false")
 
 args = parser.parse_args()
 
@@ -88,11 +90,12 @@ CAPSEG_command += " -uhd " + args.uhd
 print "About to run CAPSEG command: " + CAPSEG_command
 #p = subprocess.Popen(CAPSEG_command, shell=True)
 #sts = os.waitpid(p.pid, 0)[1]
-ret = os.system(CAPSEG_command)
+p = subprocess.Popen(CAPSEG_command, shell=True)
+sts = os.waitpid(p.pid, 0)[1]
 
 # remove the temp. dir we just setup
-#shutil.rmtree(local_tmp_dir)
-
+if not args.keep_temp_data.upper() == "TRUE":
+        shutil.rmtree(local_tmp_dir)
 
 local_q_dir = "./q_output"
 try:
@@ -106,4 +109,5 @@ for filename in os.listdir("."):
         if filename.startswith("Q") and (filename.endswith("txt") or filename.endswith("out")):
                 shutil.move(filename, os.path.join(local_q_dir,filename))
 
-sys.exit(ret)
+print "returning CapSeg results of " + str(sts)
+sys.exit(sts)
