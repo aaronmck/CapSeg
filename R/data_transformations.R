@@ -119,11 +119,12 @@ additional.normals = function(normal.database,our.normals,build.ver,analysis.set
         }
 
         # now combine the two
-        if (ncol(save.data$log.normals > 0)) {
+        if (!is.vector(save.data$log.normals) && ncol(save.data$log.normals) > 1) {
             inter <- intersect(rownames(our.normals),rownames(save.data$log.normals))
             our.normals <- cbind(our.normals[is.element(rownames(our.normals),inter),],save.data$log.normals[is.element(rownames(save.data$log.normals),inter),])
         }
     }
+    print(dim(our.normals))
     return(our.normals)
 }
 
@@ -163,6 +164,7 @@ load.additional.normals <- function(normal.db.location,
             print(paste("Skipping file",file,"since it's not an R data file"))
             next
         }
+        print(paste("examining file ",file))
 
         # load up the normal -- load up the log'ed matrix
         fl = paste(normal.database,file,sep="/")
