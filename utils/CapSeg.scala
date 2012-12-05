@@ -191,7 +191,7 @@ class CapSeg extends QScript {
                             tumorSampleToPGFile,
                             outputDir,
                             tangentLocation,
-                            tangentOuputLocation,
+                            tangentOutputLocation,
                             build,
                             analysisSet,
                             perLane,
