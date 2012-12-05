@@ -75,8 +75,11 @@ class CapSeg extends QScript {
   @Argument(doc = "do we want to collect coverage at the lane level (true) or at the sample level (default)", shortName = "pl", required = false)
   var perLane = false // the logic has to be reversed a little to work with the arg system
 
-  @Input(doc = "tangent normalization database location", shortName = "tnd", required = false)
+  @Input(doc = "tangent normalization input database location", shortName = "tnd", required = false)
   var tangentLocation = new File("/xchip/cga2/aaron/static/normal_subspaces/")
+  
+  @Input(doc = "tangent normalization output database location", shortName = "tnd", required = false)
+  var tangentOutputLocation = new File("/xchip/cga2/aaron/static/normal_subspaces/")
 
   // the command line traits -- defaults for our pipeline
   trait CommandLineGATKArgs extends CommandLineGATK {
@@ -188,6 +191,7 @@ class CapSeg extends QScript {
                             tumorSampleToPGFile,
                             outputDir,
                             tangentLocation,
+                            tangentOuputLocation,
                             build,
                             analysisSet,
                             perLane,
@@ -297,7 +301,7 @@ class SegmentSample(libraryDir: File, bamName: String, bamToSample: File, output
 }
 
 // post process the data using the R script
-class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_coverage: File, target_file: File, useCachedData: Boolean, cachedLocation: File, sToRGFileNormals: File, sToRGFileTumors: File, outputDir: File, tangentLocation: File, buildType: String, analysisSet: String, byLane: Boolean, normalBaitFile: File, signalFLs: List[File], signalTSV: File, histoData: Boolean) extends CommandLineFunction {
+class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_coverage: File, target_file: File, useCachedData: Boolean, cachedLocation: File, sToRGFileNormals: File, sToRGFileTumors: File, outputDir: File, tangentLocation: File, tangentOuputLocation: File, buildType: String, analysisSet: String, byLane: Boolean, normalBaitFile: File, signalFLs: List[File], signalTSV: File, histoData: Boolean) extends CommandLineFunction {
   @Input(doc = "the normal bait output file") var normalFile = normal_bait_coverage
   @Input(doc = "the tumor bait output file") var tumorFile = tumor_bait_coverage
   @Input(doc = "the target list") var targetFile = target_file
@@ -306,6 +310,7 @@ class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_c
   @Input(doc = "the file containing the mapping of sample to read group (tumors)") var tumorSampleToReadGroupFile = sToRGFileTumors
   @Input(doc = "the output location") var outputDirectory = outputDir
   @Input(doc = "tangent normalization database location") var tangentDatabase = tangentLocation
+   @Input(doc = "tangent normalization database location") var tangentOutputDatabase = tangentOuputLocation
   @Input(doc = "signal tsv file") var signalTSVFile = signalTSV
 
   @Output(doc = "the signal file outputs") var signalFiles = signalFLs
@@ -322,7 +327,7 @@ class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_c
   @Argument(doc = "should we use the cache file") var useCache = useCachedData
   memoryLimit = Some(16) // change me
 
-  def commandLine = "Rscript %s/R/tangent_normalize.R --normal.lane.data %s --tumor.lane.data %s --target.list %s --use.cache %s --cache.location %s --script.dir %s --normal.sample.to.lanes.file %s --tumor.sample.to.lanes.file %s --output.location %s --tangent.database.location %s --build %s --analysis.set.name %s --bylane %s --bait.factor %s --signal.files %s --histo.data %s".format(libDir.getAbsolutePath(), normalFile.getAbsolutePath(), tumorFile.getAbsolutePath(), targetFile.getAbsolutePath(), useCache, cacheLocation.getAbsolutePath(), libDir.getAbsolutePath(), normalSampleToReadGroupFile.getAbsolutePath(), tumorSampleToReadGroupFile.getAbsolutePath(), outputDirectory.getAbsolutePath(), tangentDatabase.getAbsolutePath(), build, analysisSetName,byLaneData, nbf.getAbsolutePath(), signalTSVFile.getAbsolutePath(), uhd)
+  def commandLine = "Rscript %s/R/tangent_normalize.R --normal.lane.data %s --tumor.lane.data %s --target.list %s --use.cache %s --cache.location %s --script.dir %s --normal.sample.to.lanes.file %s --tumor.sample.to.lanes.file %s --output.location %s --tangent.database.location %s --tangent.database.output %s --build %s --analysis.set.name %s --bylane %s --bait.factor %s --signal.files %s --histo.data %s".format(libDir.getAbsolutePath(), normalFile.getAbsolutePath(), tumorFile.getAbsolutePath(), targetFile.getAbsolutePath(), useCache, cacheLocation.getAbsolutePath(), libDir.getAbsolutePath(), normalSampleToReadGroupFile.getAbsolutePath(), tumorSampleToReadGroupFile.getAbsolutePath(), outputDirectory.getAbsolutePath(), tangentDatabase.getAbsolutePath(), tangentOuputDatabase.getAbsolutePath(), build, analysisSetName,byLaneData, nbf.getAbsolutePath(), signalTSVFile.getAbsolutePath(), uhd)
 }
 
 // correct the output files for any dups lines and extra headers
