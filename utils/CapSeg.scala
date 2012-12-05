@@ -78,7 +78,7 @@ class CapSeg extends QScript {
   @Input(doc = "tangent normalization input database location", shortName = "tnd", required = false)
   var tangentLocation = new File("/xchip/cga2/aaron/static/normal_subspaces/")
   
-  @Input(doc = "tangent normalization output database location", shortName = "tnd", required = false)
+  @Input(doc = "tangent normalization output database location", shortName = "tndo", required = false)
   var tangentOutputLocation = new File("/xchip/cga2/aaron/static/normal_subspaces/")
 
   // the command line traits -- defaults for our pipeline
