@@ -1,5 +1,5 @@
 # plot data that is arranged genomicly
-plot_genome_data <- function(contig,start.pos,stop.pos,value,sample,segs=NA,is.hg18=FALSE,max.plot=3.0) {
+plot_genome_data <- function(contig,start.pos,stop.pos,value,sample,segs=NA,is.hg18=FALSE,max.plot=3.0,inflate.axis=1.0,label.inflation=1.0) {
 	unique_contigs <- unique(contig)
 	max_pos = 0
     max.plot = log2(max.plot)
@@ -7,11 +7,12 @@ plot_genome_data <- function(contig,start.pos,stop.pos,value,sample,segs=NA,is.h
 	# find the maximum position
 	for (unique_contig in unique_contigs) { max_pos <- max_pos + max(stop.pos[which(contig==unique_contig)]) }
 	# plot the initial plot
-	plot(0,ylim=c(-0.5,3.5),xlim=c(0,max_pos),main=sample,ylab="Tangent Normalized CR",xlab="Chromosome",col=rgb(0,0,0,0.0),axes=F,bty="n")
+	par(mar=c(5,5,4,2) + 0.1)   
+	plot(0,ylim=c(-0.5,3.5),xlim=c(0,max_pos),main=sample,ylab="Tangent Normalized CR",xlab="Chromosome",col=rgb(0,0,0,0.0),axes=F,bty="n",cex.lab=label.inflation)
     # check if theres a difference between the contig naming
     if (is.hg18 & !is.na(segs)) {
     	print("Fixing hg18 names")
-		segs[,2] = paste("chr",as.character(segs[,2]),sep="")
+		  segs[,2] = paste("chr",as.character(segs[,2]),sep="")
     }
 
 	cur_pos = 0
@@ -31,8 +32,8 @@ plot_genome_data <- function(contig,start.pos,stop.pos,value,sample,segs=NA,is.h
             contig_midpoints = c(contig_midpoints,cur_pos + 0.5*max(stop.pos[which(contig==unique_contig)]) )
             cur_pos <- cur_pos + max(stop.pos[which(contig==unique_contig)])
 	}
-	axis(at=c(0.0,0.5,1.0,1.5,2.0,2.5,3.0),labels=T,side=2)
-	axis(at=contig_midpoints,labels=unique_contigs,side=1,tick=F,line=F,outer=F)
+	axis(at=c(0.0,0.5,1.0,1.5,2.0,2.5,3.0),labels=T,side=2,cex.axis=inflate.axis)
+	axis(at=contig_midpoints,labels=unique_contigs,side=1,tick=F,line=F,outer=F,cex.axis=inflate.axis)
         abline(h=0.5,col=rgb(0,0,0,0.1))
         abline(h=1.5,col=rgb(0,0,0,0.1))
         abline(h=1.0,col=rgb(0,0,0,0.1))
