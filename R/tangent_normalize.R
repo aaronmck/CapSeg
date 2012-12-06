@@ -67,7 +67,7 @@ normal.lanes.to.samples.file	                <- args$normal.sample.to.lanes.file
 tumor.lanes.to.samples.file		        <- args$tumor.sample.to.lanes.file
 output.location					<- args$output.location
 tangent.database.location		        <- args$tangent.database.location
-tangent.database.output		                <- args$tangent.database.output
+tangent.database.output		                <- args$output.tangent.database
 build.version					<- args$build
 analysis.set.name				<- args$analysis.set.name
 by.lane 					<- args$bylane
