@@ -22,7 +22,7 @@ option.list <- list(
 		make_option(c("--tumor.to.bam"),help="the file matching for tumor bam to the sample",default="blank"),
 		make_option(c("--output.location"),help="where to write output files to - the segmentation results plus any graphs",default="blank"),
 		make_option(c("--tangent.database.location"),help="the directory of tangent planes to normalize against; this directory should contain only tangent planes",default="blank"),
-		make_option(c("--otdb"),help="the directory where we put the output tangent data",default="blank"),
+		make_option(c("--output.tangent.database"),help="the directory where we put the output tangent data",default="blank"),
 		make_option(c("--build"),help="are we running with hg18 and hg19",default="blank"),
 		make_option(c("--analysis.set.name"),help="what was the name of the analysis set",default="blank"),
 		make_option(c("--bylane"),help="is the data coming in by lane? (if not it should be by sample)",default="blank"),
@@ -67,7 +67,7 @@ normal.lanes.to.samples.file	                <- args$normal.sample.to.lanes.file
 tumor.lanes.to.samples.file		        <- args$tumor.sample.to.lanes.file
 output.location					<- args$output.location
 tangent.database.location		        <- args$tangent.database.location
-tangent.database.output		                <- args$otdb
+tangent.database.output		                <- args$tangent.database.output
 build.version					<- args$build
 analysis.set.name				<- args$analysis.set.name
 by.lane 					<- args$bylane
