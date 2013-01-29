@@ -18,10 +18,9 @@ Prerequisites installed on the machine are:
       - corpcor
 
 Versions
-==
+--------
 
-v1.0
-=
+*v1.0*
 - Introduced seperate directories for input and output of the tangent planes (historical data)
 - Minor bug fixes
 
