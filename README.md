@@ -21,6 +21,9 @@ Versions
 --------
 
 *v1.0*
+- Initial commit
+
+*v1.0.1*
 - Introduced seperate directories for input and output of the tangent planes (historical data)
 - Minor bug fixes
 
