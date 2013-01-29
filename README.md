@@ -2,6 +2,7 @@ CapSeg
 ======
 
 CapSeg - Copy Number from Exome Sequencing
+Aaron McKenna <aaronmck at uw.edu>
 
 CapSeg is a tool for transforming exome sequencing data to copy number information in cancer samples.  
 Using a toolkit based on the GATK, Queue, R, and python, CapSeg transforms input paired tumor-normal
@@ -16,6 +17,12 @@ Prerequisites installed on the machine are:
       - plyr
       - corpcor
 
-=== Versions ===
+Versions
+===
+
+v1.0
+==
+- Introduced seperate directories for input and output of the tangent planes (historical data)
+- Minor bug fixes
 
 
