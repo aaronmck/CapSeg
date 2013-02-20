@@ -1,0 +1,13 @@
+Improvements:
+- Algorithm fixes and improvements in this iteration of CapSeg:
+- Gram-Schmidt block normalization
+- General code cleanup
+- Tumor-as-normal (or presented as) detection
+- Detect sample failures
+- X-chromosome
+
+Software goals:
+- Regression testing
+- Packaging / bundling system to allow for better firehose revision control
+- Versioned historical tangent plane database
+- Better failure propagation to Firehose
