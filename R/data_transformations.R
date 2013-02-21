@@ -15,6 +15,44 @@ intersect.tumor.normal.targets = function(normal.data,intersecting.baits) {
   return(normal.data)
 }
 
+#' given the input data matrix and a set of chromosomes, return a list of matricies, one for each
+#' sex chromosome, plus one default with the remaining chromosomes (stored as autosome in return matrix)
+#'
+#' @param input.data the data matrix of all of the coverage across all targets
+#' @param sex.chromosome.list the list of sex chromosomes; each of which should be split ou
+#' @param list.of.baits the list of baits; we use this to map baits to chromosomes to split out the data. format: target_name, chr, start, stop (1 based)
+#' @return the split out autosomes and germline chromosomes as a list of matricies
+#' @keywords split sex chromosome
+#'
+split.out.sex.chromosomes = function(input.data,sex.chromosome.list,list.of.baits) {
+    all.baits = list.of.baits[,1]
+    return.list = list()
+    for (chr in sex.chromosome.list) {
+        chr.baits <- list.of.baits[list.of.baits[,2]==chr,1]
+        sub.matrix <- input.data[is.element(rownames(input.data),chr.baits),]
+        return.list[chr] = sub.matrix
+        all.baits = all.baits[!is.element(chr.baits)]
+    }
+    autosome.data <- input.data[is.element(rownames(input.data),all.baits),]
+    return.list["autosome"] = autosome.data
+    return(return.list)
+}
+
+#' given an input matrix, mean center the data and log transform (setting any pre-log zero values to epsilon)
+#'
+#' @param input.data our input data matrix
+#' @return the mean centered and log transformed data
+#' @keywords split sex chromosome
+#'
+mean.center.log.transform = function(input.data) {
+    td.mean = apply(input.data,2,mean)
+    td.data = input.data / td.mean
+    td.data[abs(td.data) < epsilon] = epsilon
+    log.input = data.frame(log2(td.data))
+    return(log.input)
+}
+
+
 #' given a pseudo inverse matrix and a case matrix, return the multiplication
 #' @param log.tumor the tumor data in log space
 #' @param pseudo.inverse the inverse matrix

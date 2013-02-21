@@ -30,8 +30,9 @@ option.list <- list(
                 make_option(c("--bait.factor"),help="the bait factor data file",default="blank"),
                 make_option(c("--bam.file.listing"),help="the listing of bam files, by tumor and by normal",default="blank"),
                 make_option(c("--signal.files"),help="the sample name to signal file",default="blank"),
-                make_option(c("--histo.data"),help="should we use historical data",default="blank"),
-               make_option(c("--debug"),help="dumb lots of debugging data to the <output_dir>/debug directory",default="blank")
+                make_option(c("--use.histo.data"),help="should we use historical data",default="blank"),
+                make_option(c("--debug"),help="dump lots of debugging data to the <output_dir>/debug directory",default="blank"),
+                make_option(c("--sex.chromosomes"),help="Any sex chromosomes; each with by tangent normalized by itself. Seperate a list with a comma, no spaces",default="blank")
 )
 opt <- parse_args(OptionParser(option_list=option.list))
 
@@ -77,9 +78,9 @@ bam.file.listing                                <- args$bam.file.listing
 tumor.to.bam                                    <- args$tumor.to.bam
 normal.to.bam                                   <- args$normal.to.bam
 signal.files                                    <- args$signal.files
-histo.data                                      <- toupper(args$histo.data) == "TRUE"
+use.histo.data                                      <- toupper(args$histo.data) == "TRUE"
 debug                                           <- toupper(args$debug) == "TRUE"
-
+sex.chromosome.list                             <- toupper(args$sex.chromosomes) == "TRUE"
 # some constants to use
 removeBadBaitsAndLanes = T # TRUE
 optimize.bf = F # optimize those baits!
@@ -109,7 +110,7 @@ normalSampleTable = read.table(normal.lanes.to.samples.file,header=T,stringsAsFa
 # get the baits (targets)
 if (debug) print(paste("loading the baits from the file",target.list.file))
 baits <- read.csv(target.list.file,header=TRUE,colClasses=c("character","character","integer","integer"))
-baits <- data.frame(baits[!duplicated(baits$name),])
+baits <- data.frame(baits[!duplicated(baits$name),]) # make sure there are no duplicates
 
 # load the big data data - the csv files of coverage; let the user know how long this is taking
 if (debug) print(paste("Starting to load the data at",format(Sys.time(), "%a %b %d %H:%M:%S %Y")))
@@ -134,45 +135,48 @@ bait.factor = bait.factor[is.element(rownames(bait.factor),rownames(tumor.data))
 # mean center the tumor and normal samples
 tumor.data = sweep(tumor.data,2,apply(tumor.data,2,mean),"/")
 
-td.mean = apply(tumor.data,2,mean)
-tumor.data = tumor.data / td.mean
-tumor.data[abs(tumor.data) < epsilon] = epsilon
-log.tumors = data.frame(log2(tumor.data))
+# TODO: split out the sex chromosomes from the autosomes
+sex.chromosomes = unlist(strsplit(sex.chromosome.list,","))
 
-normal.data = sweep(normal.data,2,apply(normal.data,2,mean),"/")
-normal.data[abs(normal.data) < epsilon] = epsilon
-log.normals = data.frame(log2(normal.data))
+# get a list of the split sex - autosomal data
+tumor.split = split.out.sex.chromosomes(tumor.data,sex.chromosomes,baits)
+normal.split = split.out.sex.chromosomes(normal.data,sex.chromosomes,baits)
 
+tumor.processed =
+# now normalize coverage across each of the split data (split by sex/autosomal data)
+for (n in c(sex.chromosomes,"autosome") {
+    log.tumor = mean.center.log.transform(tumor.split[n])
+    log.normal = mean.center.log.transform(normal.split[n])
 
-# do the initial block normalization
-bgs.center = rep(mean(colMeans(log.normals)),nrow(log.normals)) # rep(0.0,nrow(normal.data)) # log.normals[,ncol(log.normals)] # rep(0.0,nrow(normal.data))
-names(bgs.center) <- rownames(log.normals)
-log.normals = data.frame(log.normals[,1:ncol(log.normals)] - bgs.center)
-log.tumors = data.frame(log.tumors - bgs.center)
+    # do the initial block normalization
+    bgs.center = rep(mean(colMeans(log.normals)),nrow(log.normals)) # rep(0.0,nrow(normal.data)) # log.normals[,ncol(log.normals)] # rep(0.0,nrow(normal.data))
+    names(bgs.center) <- rownames(log.normals)
+    log.normals = data.frame(log.normals[,1:ncol(log.normals)] - bgs.center)
+    log.tumors = data.frame(log.tumors - bgs.center)
 
-print("Data loaded and means and log values calculated...")
-#load up the whole data set into the tangent normalization process, and calibrate each tumor against the matrix
-if (histo.data) {
-    print("loading the historical data...")
-    log.normals = additional.normals(tangent.database.location,log.normals,build.version,analysis.set.name)
-}
+    print("Data loaded and means and log values calculated...")
+    #load up the whole data set into the tangent normalization process, and calibrate each tumor against the matrix
+    if (histo.data) {
+        print("loading the historical data...")
+        log.normals = additional.normals(tangent.database.location,log.normals,build.version,analysis.set.name)
+    }
 
-target.intersect <- intersect(rownames(log.normals),rownames(log.tumors))
-print(dim(log.normals))
-print(dim(log.tumors))
-log.normals <- intersect.tumor.normal.targets(log.normals,target.intersect)
-log.tumors <- intersect.tumor.normal.targets(log.tumors,target.intersect)
+    target.intersect <- intersect(rownames(log.normals),rownames(log.tumors))
+    print(dim(log.normals))
+    print(dim(log.tumors))
+    log.normals <- intersect.tumor.normal.targets(log.normals,target.intersect)
+    log.tumors <- intersect.tumor.normal.targets(log.tumors,target.intersect)
 
-print("About to perform the SVD (PI)")
-pseudo.inverse.norm  <- pseudoinverse(data.matrix(log.normals))
-calibrated.tumors <- calibrate.tumors(data.matrix(log.tumors),data.matrix(pseudo.inverse.norm),data.matrix(log.normals),bgs.center,first=TRUE)
-colnames(calibrated.tumors) <- colnames(tumor.data)
+    print("About to perform the SVD (PI)")
+    pseudo.inverse.norm  <- pseudoinverse(data.matrix(log.normals))
+    calibrated.tumors <- calibrate.tumors(data.matrix(log.tumors),data.matrix(pseudo.inverse.norm),data.matrix(log.normals),bgs.center,first=TRUE)
+    colnames(calibrated.tumors) <- colnames(tumor.data)
 
-# save off the data to a Rdata object for later
-save.off.processed.data(log.normals,log.tumors,calibrated.tumors,baits,paste(tangent.database.output,build.version,sep="/"),analysis.set.name,build.version)
+    # save off the data to a Rdata object for later
+    save.off.processed.data(log.normals,log.tumors,calibrated.tumors,baits,paste(tangent.database.output,build.version,sep="/"),analysis.set.name,build.version)
 
-# output the raw data and plots for each sample
-output.and.plot.data(calibrated.tumors,tumor.data,baits,output.location,signal.files)
+    # output the raw data and plots for each sample
+    output.and.plot.data(calibrated.tumors,tumor.data,baits,output.location,signal.files)
 
-# output metrics for each sample
-create.sample.metric.files(calibrated.tumors,log.tumors,output.location)
+    # output metrics for each sample
+    create.sample.metric.files(calibrated.tumors,log.tumors,output.location)
