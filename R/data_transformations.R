@@ -30,11 +30,11 @@ split.out.sex.chromosomes = function(input.data,sex.chromosome.list,list.of.bait
     for (chr in sex.chromosome.list) {
         chr.baits <- list.of.baits[list.of.baits[,2]==chr,1]
         sub.matrix <- input.data[is.element(rownames(input.data),chr.baits),]
-        return.list[chr] = sub.matrix
-        all.baits = all.baits[!is.element(chr.baits)]
+        return.list[[chr]] = sub.matrix
+        all.baits = all.baits[!is.element(all.baits,chr.baits)]
     }
     autosome.data <- input.data[is.element(rownames(input.data),all.baits),]
-    return.list["autosome"] = autosome.data
+    return.list[["autosome"]] = autosome.data
     return(return.list)
 }
 
