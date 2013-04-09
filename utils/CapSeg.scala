@@ -56,6 +56,9 @@ class CapSeg extends QScript {
   @Argument(doc = "what to call this analysis set", shortName = "asn", required = true)
   var analysisSet: String = _
 
+  @Input(doc = "the VCF file with calls for the normal tissue sample in our set", shortName = "vcf", required = true)
+  var vcfFile: File = _
+
   // ---------------------------------- optional arguments ----------------------------------
   @Argument(doc = "intervals per split", shortName = "iPerSplit", required = false)
   var splitSize = 150
@@ -92,7 +95,7 @@ class CapSeg extends QScript {
   // The main script
   // ----------------------------------------------------------------------------------------------------------------
   def script = {
-    // this is because of Firehose - we have to take in string boolean parameters and convert to the Boolean type inside of this script
+    // Firehose - we have to take in string boolean parameters and convert to the Boolean type inside of this script
     var useHistData = false
     if (useHistoricalData != null && useHistoricalData.toUpperCase().equals("TRUE"))
       useHistData = true
@@ -127,7 +130,7 @@ class CapSeg extends QScript {
     if (build.equals("hg18") || build.equals("mm9")) { out.write("chr1:1\n")} else { out.write("1:1\n") }
     out.close()
 
-    //  we have four files -- sample to lane, and bam to sample files for each tumor and normal
+    //  we have four files to create -- sample to lane, and bam to sample files for each tumor and normal
     val tumorSampleToPGFile = new File(outputDir.getAbsolutePath() + "/tumorSampleInformation.txt")
     val tumorBamToSampleFile = new File(outputDir.getAbsolutePath() + "/tumorBamToSample.txt")
     val normalSampleToPGFile = new File(outputDir.getAbsolutePath() + "/normalSampleInformation.txt")
@@ -144,6 +147,9 @@ class CapSeg extends QScript {
     val finalNormalMatrixBF = new File(outputDir.getAbsolutePath() + "/baitFactors.txt")
     val signalFile = new File(outputDir.getAbsolutePath() + "/signalFiles.txt")
 
+    // where to put the allele balance information
+    val alleleFreq = outputDir + "/alleleFreq/"
+
     // merge all the output into a single file
     add(new MergeCoverage(analysisSet,
                           tumorCoverageFiles,
@@ -156,6 +162,10 @@ class CapSeg extends QScript {
                           tumors,
                           normals,
                           longQueue))
+
+    // convert the VCF file and sample list into a set of het sites to pull down in the tumors
+    val outputBEDFile = new File(outputDir.getAbsolutePath() + "/BEDFiles/")
+    add(new VCFToBED(vcfFile, outputBEDFile, normalBamToSampleFile, libraryDir))
 
     // the jobs are tied by inputs and outputs -- this step is actually after the post process step, but we do it here since the signal file
     // names are made sample-by-sample here
@@ -211,6 +221,15 @@ class CapSeg extends QScript {
     sampleTL.memoryLimit = 2
     sampleTL.intervals :+= sampleInterval
     add(sampleTL)
+  }
+
+  // get allelic information at the target het sites in a sample
+  def alleleBallance(bam: File, bed: File, dbSNP: File, output: File) = { 
+    val aBal = new AlleleCount
+    aBal.DbSNP = dbSNP
+    aBal.calls = bed
+    aBal.output = output
+    add(aBal)
   }
 
   def pulldownCoverage(sampleMap: Map[String, File], coverageFile: String, tumorNormal: String): List[File] = {
@@ -300,6 +319,7 @@ class SegmentSample(libraryDir: File, bamName: String, bamToSample: File, output
   def commandLine = "Rscript %s/R/individual_segmentation.R --bam.file.name %s --bam.to.sample.file %s --output.filename %s --signal.file %s --r.dir %s".format(libDir.getAbsolutePath(), bamFile, bamToSampleFile.getAbsolutePath(), outputFile.getAbsolutePath(), signalFile.getAbsolutePath(),libDir.getAbsolutePath())
 }
 
+
 // post process the data using the R script
 class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_coverage: File, target_file: File, useCachedData: Boolean, cachedLocation: File, sToRGFileNormals: File, sToRGFileTumors: File, outputDir: File, tangentLocation: File, tangentOutputLocation: File, buildType: String, analysisSet: String, byLane: Boolean, normalBaitFile: File, signalFLs: List[File], signalTSV: File, histoData: Boolean) extends CommandLineFunction {
   @Input(doc = "the normal bait output file") var normalFile = normal_bait_coverage
@@ -344,6 +364,17 @@ class PostProcessBaitCoverage(inputFile: File, targets: File, outputFile: File, 
   def commandLine = "Rscript %s/R/proportional_coverage.R --input.file %s --intervals %s --output.file %s --output.cr.stat.file %s --output.column.sums %s".format(loc.getAbsolutePath(),inputCSV.getAbsolutePath(),targetFile.getAbsolutePath(),outputCSV.getAbsolutePath(),outputCR.getAbsolutePath(),outputCS.getAbsolutePath())
 }
 
+// given a VCF file, split out a BED file for each of the samples into the specified directory
+class VCFToBED(vcfFile: File, outputDir: File, normalBamToSample: File, utilityLoc: File) extends CommandLineFunction {
+  @Input(doc = "the VCF input file") var vcf = vcfFile
+  @Input(doc = "the output directory to put the BED files in") var out = outputDir
+  @Input(doc = "the mapping of BAM files to their sample name in BAM file") var mapping = normalBamToSample
+  @Output(doc = "the final csv output file") var outputFile = new File(outputDir.getAbsolutePath() + "/complete.marker") // this is a cheap workaround, the script generates this file on a successful run
+  @Argument(doc = "where to find the scripts (we add the utils/python/ to this path)") var loc = utilityLoc
+  memoryLimit = Some(2)
+
+  def commandLine = "python %s/utils/python/vcf_to_bed.py --vcf %s --outputdir %s --mapping %s".format(loc.getAbsolutePath(),vcf.getAbsolutePath(),outputDir.getAbsolutePath(),mapping.getAbsolutePath());
+}
 
 // ------------------------------------------------------------------
 // -------------------- utility classes -----------------------------
