@@ -26,8 +26,8 @@ class CapSeg extends QScript {
   // --------------------------------------------------------
   // required arguments
   // --------------------------------------------------------
-  @Argument(doc = "a file containing a sample column, a tumor column, and a normal column", shortName = "I")
-  var samples: String = _
+  @Input(doc = "a file containing a sample column, a tumor column, and a normal column", shortName = "I")
+  var samples: File = _
 
   @Argument(doc = "path to the reference", shortName = "R")
   var reference: File = _
@@ -58,6 +58,9 @@ class CapSeg extends QScript {
 
   @Input(doc = "the VCF file with calls for the normal tissue sample in our set", shortName = "vcf", required = true)
   var vcfFile: File = _
+
+  @Input(doc = "dbSNP file; used to order the SNPs in the allele coverage pulldown list ", shortName = "dbsnp", required = true)
+  var dbsnp: File = _
 
   // ---------------------------------- optional arguments ----------------------------------
   @Argument(doc = "intervals per split", shortName = "iPerSplit", required = false)
@@ -122,7 +125,7 @@ class CapSeg extends QScript {
     else
       normals = pulldownCoverage(sampleObj.getNormalMap(),normalCoverageFiles,"normal")
     val tumors = pulldownCoverage(sampleObj.getTumorMap(),tumorCoverageFiles,"tumor")
-
+    
     // make the build specific interval file
     var sampleIntervals = new File(tmpDir.getAbsolutePath() + "/sample.interval_list")
 
@@ -147,9 +150,6 @@ class CapSeg extends QScript {
     val finalNormalMatrixBF = new File(outputDir.getAbsolutePath() + "/baitFactors.txt")
     val signalFile = new File(outputDir.getAbsolutePath() + "/signalFiles.txt")
 
-    // where to put the allele balance information
-    val alleleFreq = outputDir + "/alleleFreq/"
-
     // merge all the output into a single file
     add(new MergeCoverage(analysisSet,
                           tumorCoverageFiles,
@@ -163,10 +163,6 @@ class CapSeg extends QScript {
                           normals,
                           longQueue))
 
-    // convert the VCF file and sample list into a set of het sites to pull down in the tumors
-    val outputBEDFile = new File(outputDir.getAbsolutePath() + "/BEDFiles/")
-    add(new VCFToBED(vcfFile, outputBEDFile, normalBamToSampleFile, libraryDir))
-
     // the jobs are tied by inputs and outputs -- this step is actually after the post process step, but we do it here since the signal file
     // names are made sample-by-sample here
     var signal = List.empty[File]
@@ -174,6 +170,14 @@ class CapSeg extends QScript {
     var firehoseInport = new java.io.FileWriter(analysisSet + ".segments.tsv")
     sampleToSignal.write("sample\tsignal.file\n")
     firehoseInport.write("individual_id\tcapseg_segmentation_file\n")
+
+    // where to put the allele balance information
+    val alleleFreq = outputDir + "/alleleFreq/"
+    add(new VCFToBED(vcfFile, alleleFreq, normalBamToSampleFile, tumorBamToSampleFile, samples, libraryDir, dbsnp))
+
+    // for each tumor convert the associated normal sample BED file from the above step with the bam into an allele balance file
+    var acovFiles = addAlleleBalance(sampleObj.getTumorMap(),dbsnp, alleleFreq)
+
 
     for ((sample, tumor) <- sampleObj.getTumorMap) {
       val signalFile = new File(outputDir.getAbsolutePath() + "/signal/" + sample + ".tsv")
@@ -208,7 +212,8 @@ class CapSeg extends QScript {
                             finalNormalMatrixBF,
                             signal,
                             signalFile,
-                            useHistData))
+                            useHistData,
+                            acovFiles))
   }
 
   // sample to lane walker
@@ -224,7 +229,7 @@ class CapSeg extends QScript {
   }
 
   // get allelic information at the target het sites in a sample
-  def alleleBallance(bam: File, bed: File, dbSNP: File, output: File) = { 
+  def alleleBalance(bam: File, bed: File, dbSNP: File, output: File) = { 
     val aBal = new AlleleCount
     aBal.DbSNP = dbSNP
     aBal.calls = bed
@@ -252,6 +257,19 @@ class CapSeg extends QScript {
     return(returnList)
   }
 
+  // for each tumor sample, pull down the appropriate allele balance
+  def addAlleleBalance(tumorMap: Map[String, File], dbsnp: File, alleleFreq: File): List[File] = { 
+    var returnList = List[String]()
+    for ((sample,bamfile) <- tumorMap) {
+      val output = alleleFreq + "/" + sample + ".acov"
+      // now figure out what the normal BED file is called 
+      val bedfile = alleleFreq + "/" + sample + ".bed"
+      alleleBalance(bamfile, bedfile, dbsnp, output)
+      returnList ::= output
+    }
+    return(returnList)
+  }
+
   // sometimes we don't have a normal, so we'd like to use the prototypical coverage
   def prototypicalNormalPulldownCoverage(protoLocCoverage: File, coverageFile: String): List[String] = {
     val sFile = new PrintWriter(new File(coverageFile))
@@ -276,13 +294,13 @@ class CapSeg extends QScript {
     bait.perSample = perSample
     bait.out = outputFile
     bait.isr = IntervalSetRule.INTERSECTION
-    bait.intervals :+= bed
+     bait.intervals :+= bed
     add(bait)
   }
 }
 
 // ----------------------------------------------------------------------------------------------------------------
-// the classes
+// the classes - these tell the CapSeg script how to call external tools
 // ----------------------------------------------------------------------------------------------------------------
 
 // create firehose import file
@@ -321,7 +339,10 @@ class SegmentSample(libraryDir: File, bamName: String, bamToSample: File, output
 
 
 // post process the data using the R script
-class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_coverage: File, target_file: File, useCachedData: Boolean, cachedLocation: File, sToRGFileNormals: File, sToRGFileTumors: File, outputDir: File, tangentLocation: File, tangentOutputLocation: File, buildType: String, analysisSet: String, byLane: Boolean, normalBaitFile: File, signalFLs: List[File], signalTSV: File, histoData: Boolean) extends CommandLineFunction {
+class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_coverage: File, target_file: File, 
+                      useCachedData: Boolean, cachedLocation: File, sToRGFileNormals: File, sToRGFileTumors: File, 
+                      outputDir: File, tangentLocation: File, tangentOutputLocation: File, buildType: String, analysisSet: String, 
+                      byLane: Boolean, normalBaitFile: File, signalFLs: List[File], signalTSV: File, histoData: Boolean, acovFiles: List[File]) extends CommandLineFunction {
   @Input(doc = "the normal bait output file") var normalFile = normal_bait_coverage
   @Input(doc = "the tumor bait output file") var tumorFile = tumor_bait_coverage
   @Input(doc = "the target list") var targetFile = target_file
@@ -330,8 +351,9 @@ class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_c
   @Input(doc = "the file containing the mapping of sample to read group (tumors)") var tumorSampleToReadGroupFile = sToRGFileTumors
   @Input(doc = "the output location") var outputDirectory = outputDir
   @Input(doc = "tangent normalization database location") var tangentDatabase = tangentLocation
-   @Input(doc = "tangent normalization database location") var tangentOutputDatabase = tangentOutputLocation
+  @Input(doc = "tangent normalization database location") var tangentOutputDatabase = tangentOutputLocation
   @Input(doc = "signal tsv file") var signalTSVFile = signalTSV
+  @Input(doc = "coverage files from the allele balance pulldown") var coverageFiles = acovFiles
 
   @Output(doc = "the signal file outputs") var signalFiles = signalFLs
   @Output(doc = "the cache location") var cacheLocation = cachedLocation
@@ -365,15 +387,17 @@ class PostProcessBaitCoverage(inputFile: File, targets: File, outputFile: File, 
 }
 
 // given a VCF file, split out a BED file for each of the samples into the specified directory
-class VCFToBED(vcfFile: File, outputDir: File, normalBamToSample: File, utilityLoc: File) extends CommandLineFunction {
+class VCFToBED(vcfFile: File, outputDir: File, normalBamToSample: File, tumorBamToSample: File, individualMapping: File, utilityLoc: File, outputFile: File) extends CommandLineFunction {
   @Input(doc = "the VCF input file") var vcf = vcfFile
   @Input(doc = "the output directory to put the BED files in") var out = outputDir
-  @Input(doc = "the mapping of BAM files to their sample name in BAM file") var mapping = normalBamToSample
-  @Output(doc = "the final csv output file") var outputFile = new File(outputDir.getAbsolutePath() + "/complete.marker") // this is a cheap workaround, the script generates this file on a successful run
+  @Input(doc = "the mapping of normal BAM files to their sample name in BAM file") var nmap = normalBamToSample
+  @Input(doc = "the mapping of individual to its normal and tumor bam files") var imap = individualMapping
+  @Input(doc = "the mapping of tumor BAM files to their sample names ") var tmap = tumorBamToSample
+  @Output(doc = "the final csv output file") var outFile = outputFile
   @Argument(doc = "where to find the scripts (we add the utils/python/ to this path)") var loc = utilityLoc
   memoryLimit = Some(2)
 
-  def commandLine = "python %s/utils/python/vcf_to_bed.py --vcf %s --outputdir %s --mapping %s".format(loc.getAbsolutePath(),vcf.getAbsolutePath(),outputDir.getAbsolutePath(),mapping.getAbsolutePath());
+  def commandLine = "python %s/utils/python/vcf_to_bed.py --vcf %s --outputdir %s -nmap %s -tmap %s -imap %s".format(loc.getAbsolutePath(),vcf.getAbsolutePath(),outputDir.getAbsolutePath(),nmap.getAbsolutePath(),tmap.getAbsolutePath(),imap.getAbsolutePath());
 }
 
 // ------------------------------------------------------------------
