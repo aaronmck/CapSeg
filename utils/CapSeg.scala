@@ -172,7 +172,8 @@ class CapSeg extends QScript {
     firehoseInport.write("individual_id\tcapseg_segmentation_file\n")
 
     // where to put the allele balance information
-    val alleleFreq = outputDir + "/alleleFreq/"
+    val alleleFreq = new File(outputDir + "/alleleFreq/")
+    alleleFreq.mkdir();
     add(new VCFToBED(vcfFile, alleleFreq, normalBamToSampleFile, tumorBamToSampleFile, samples, libraryDir, dbsnp))
 
     // for each tumor convert the associated normal sample BED file from the above step with the bam into an allele balance file
@@ -259,7 +260,7 @@ class CapSeg extends QScript {
 
   // for each tumor sample, pull down the appropriate allele balance
   def addAlleleBalance(tumorMap: Map[String, File], dbsnp: File, alleleFreq: File): List[File] = { 
-    var returnList = List[String]()
+    var returnList = List[File]()
     for ((sample,bamfile) <- tumorMap) {
       val output = alleleFreq + "/" + sample + ".acov"
       // now figure out what the normal BED file is called 
@@ -368,7 +369,6 @@ class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_c
 
   @Argument(doc = "should we use the cache file") var useCache = useCachedData
   memoryLimit = Some(16) // change me
-
   def commandLine = "Rscript %s/R/tangent_normalize.R --normal.lane.data %s --tumor.lane.data %s --target.list %s --use.cache %s --cache.location %s --script.dir %s --normal.sample.to.lanes.file %s --tumor.sample.to.lanes.file %s --output.location %s --tangent.database.location %s --output.tangent.database %s --build %s --analysis.set.name %s --bylane %s --bait.factor %s --signal.files %s --histo.data %s".format(libDir.getAbsolutePath(), normalFile.getAbsolutePath(), tumorFile.getAbsolutePath(), targetFile.getAbsolutePath(), useCache, cacheLocation.getAbsolutePath(), libDir.getAbsolutePath(), normalSampleToReadGroupFile.getAbsolutePath(), tumorSampleToReadGroupFile.getAbsolutePath(), outputDirectory.getAbsolutePath(), tangentDatabase.getAbsolutePath(), tangentOutputDatabase.getAbsolutePath(), build, analysisSetName,byLaneData, nbf.getAbsolutePath(), signalTSVFile.getAbsolutePath(), uhd)
 }
 

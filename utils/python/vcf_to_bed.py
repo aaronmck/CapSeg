@@ -24,6 +24,15 @@ parser.add_argument('-tmap', '--tumor_mapping', help="the mapping of tumor sampl
 # where to dump the output: we use the sample name plus .bed
 parser.add_argument('-out', '--outputdir', help="where to put the output files", required=True)
 
+# where to dump the output: we use the sample name plus .bed
+parser.add_argument('-sc','--sex_chromosome', help="what sex chromosome should we put hets from", required=False, default="X")
+
+# where to dump the output: we use the sample name plus .bed
+parser.add_argument('-hc','--het_ratio', help="below this threshold we call the sample a male", required=False, default=0.005, type=float)
+
+# where to dump the output: we use the sample name plus .bed
+parser.add_argument('-sf','--sex_file', help="what file should we write the sex file to", required=True)
+
 # our VCF file
 parser.add_argument('-vcf', '--vcf', help="the input vcf file", required=True)
 
@@ -49,35 +58,39 @@ sm = open(args.normal_mapping,"r")
 hdr = sm.readline()
 for line in sm:
     sp = line.strip().split("\t")
-    normal_sample_to_bam[sp[1]] = sp[0]
+    normal_sample_to_bam[sp[1]] = os.path.basename(sp[0])
 
 # now go from normal bam to tumor bam
 sm = open(args.individual_mapping,"r")
 hdr = sm.readline()
 for line in sm:
     sp = line.strip().split("\t")
-    normal_bam_to_tumor_bam[sp[2]] = sp[1]
+    normal_bam_to_tumor_bam[os.path.basename(sp[2])] = os.path.basename(sp[1])
 
 # final go from tumor bam to tumor sample
 sm = open(args.tumor_mapping,"r")
 hdr = sm.readline()
 for line in sm:
     sp = line.strip().split("\t")
-    tumor_bam_to_sample[sp[0]] = sp[1]
+    tumor_bam_to_sample[os.path.basename(sp[0])] = sp[1]
 
 # now create the final mapping for each normal sample we have
-for key,value in normal_sample_to_bam:
+for key,value in normal_sample_to_bam.iteritems():
     if not normal_bam_to_tumor_bam.has_key(value):
         raise NameError("Unable to map the normal sample " + key + " to a tumor bam file")
-    tumor_bam = normal_bam_to_tumor_bam[key]
+    tumor_bam = normal_bam_to_tumor_bam[value]
     
-    if not tumor_bam_to_sample.has_key(value):
+    if not tumor_bam_to_sample.has_key(tumor_bam):
         raise NameError("Unable to map the tumor bam " + tumor_bam + " to a tumor sample")
     final_normal_sample_to_tumor_sample[key] = tumor_bam_to_sample[tumor_bam]
     
 
 sample_to_position = {}
 sample_to_output = {}
+
+# totals by sample
+het_calls = {}
+het_totals = {}
 
 header_loaded = False
 line_count = 0
@@ -93,16 +106,20 @@ for line in vcf_input:
 
         # now find each of the samples
         samples = sp[9:len(sp)]
-        for key, value in sample_mapping.iteritems():
+        for key, value in final_normal_sample_to_tumor_sample.iteritems():
             if not key in samples:
                 raise NameError("Sample name " + key + " missing from the input file")
             sample_to_position[key] = samples.index(key)
         header_loaded = True
         
         for key, value in final_normal_sample_to_tumor_sample.iteritems():
+            if not os.path.exists(args.outputdir):
+                os.makedirs(args.outputdir)
             flname = open(os.path.join(args.outputdir,value +".bed"),"w")
             sample_to_output[key] = flname
-
+            het_calls[key] = 0
+            het_totals[key] = 0
+            
 
     # process the rest of the lines in the file        
     else:
@@ -130,16 +147,30 @@ for line in vcf_input:
         for key, val in sample_to_position.iteritems():
             geno_full = sp[sample_to_position[key] + 9]
             geno_each = geno_full.split(":")[0].split("/")
+            
+            if sp[0] == args.sex_chromosome:
+                het_totals[key] += 1
+            
             if len(geno_each) != 2 or geno_each[0] == geno_each[1]:
                 continue
 
+            if sp[0] == args.sex_chromosome:
+                het_calls[key] += 1
             # ok, we have a het to output, dump it to the target file
             output_file = sample_to_output[key]
             output_file.write(chrom + "\t" + str(int(pos)-1) + "\t" + pos + "\t" + (geno_full) + "\n")
 
-
 # write the output marker, pretty much a unix touch on the file
 marker = open(os.path.join(args.outputdir,"complete.marker"),"w")
 marker.close()
-        
+
+hetname = open(args.sex_file,"w")
+hetname.write("sample\thet_calls\ttotal_sites\tcall\tratio\n")
+# write out each samples het call, het total, and the call
+for key, value in het_totals.iteritems():
+    call = "MALE" 
+    if float(het_calls[key])/float(value) > args.het_ratio:
+        call = "FEMALE"
+    hetname.write(final_normal_sample_to_tumor_sample[key] + "\t" + str(het_calls[key]) + "\t" + str(value) + "\t" + str(call) + "\t" + str(float(het_calls[key])/float(value)) + "\n")
+
 
