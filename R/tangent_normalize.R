@@ -87,10 +87,10 @@ vcf.calls.file                  <- args$call.database
 removeBadBaitsAndLanes = T # TRUE
 optimize.bf = F # optimize those baits!
 calibrate.against.others = T
-
+debug = TRUE
 # our epsilon value - used to make sure we're not producing log(0) calls
 epsilon <- .Machine$double.eps * 10^6
-# options(error=dump.frames)
+sex.chromosomes = c("X","Y")
 
 # create the output directory and the cache directory if needed, and setup some debug logging locations (used only if debug == T)
 dir.create(output.location,recursive=T)
@@ -99,7 +99,7 @@ debug.location = paste(output.location,"debug",sep="/")
 
 #if (debug) {
     dir.create(debug.location,recursive=T)
-    sink(paste(output.location,"debug","debugging_log.txt",sep="/"))
+    # sink(paste(output.location,"debug","debugging_log.txt",sep="/"))
     save.image(paste(debug.location,".parameters.Rdata",sep="/")) # save off a copy of the parameters we used for the run
 #}
 
@@ -108,7 +108,7 @@ print("Loading the sample tables from the file on disk...")
 
 # TODO: split out the sex chromosomes from the autosomes
 print(paste("Sex chromosome list is ",sex.chromosome.list))
-sex.chromosomes = unlist(strsplit(sex.chromosome.list,","))
+# sex.chromosomes = unlist(strsplit(sex.chromosome.list,","))
 
 tumorSampleTable = read.table(tumor.lanes.to.samples.file,header=T,stringsAsFactors=F,sep="\t")
 normalSampleTable = read.table(normal.lanes.to.samples.file,header=T,stringsAsFactors=F,sep="\t")
@@ -128,12 +128,15 @@ if (debug) print(paste("Intersecting the normal and tumor bait lists, normal dat
 
 # cut the data to the intersect of the data
 target.intersect <- intersect(rownames(normal.data),rownames(tumor.data))
-print(paste("intersection of the tumor and normal has ",length(target.intersect),"rows"))
+print(paste("intersection of the tumor and normal has",length(target.intersect),"rows"))
 
 normal.data <- intersect.tumor.normal.targets(normal.data,target.intersect)
 tumor.data <- intersect.tumor.normal.targets(tumor.data,target.intersect)
 
 # load up our bait factor
+print("Subsetting the data")
+print(dim(baits))
+print(dim(normal.data))
 baits.subset <- baits[is.element(baits$name,rownames(normal.data)),]
 bait.factor <- read.delim(bait.factor.file)
 bait.factor[bait.factor[,1]<=0,2] = epsilon
@@ -151,6 +154,7 @@ processed.data = list()
 
 # now normalize coverage across each of the split data (split by sex/autosomal data)
 for (n in c("autosome",sex.chromosomes)) {
+    print("Starting analysis...")
     log.tumor = mean.center.log.transform(tumor.split[[n]])
     log.normal = mean.center.log.transform(normal.split[[n]])
 
@@ -160,7 +164,7 @@ for (n in c("autosome",sex.chromosomes)) {
     log.normal = data.frame(log.normal[,1:ncol(log.normal)] - bgs.center)
     log.tumor = data.frame(log.tumor - bgs.center)
 
-    print("Data loaded and means and log values calculated...")
+    print(paste("Data loaded and means and log values calculated...",n))
     #load up the whole data set into the tangent normalization process, and calibrate each tumor against the matrix
     if (use.histo.data) {
         print("loading the historical data...")
@@ -179,13 +183,17 @@ for (n in c("autosome",sex.chromosomes)) {
     calibrated.tumor <- calibrate.tumors(data.matrix(log.tumor),data.matrix(pseudo.inverse.norm),data.matrix(log.normal),bgs.center,first=TRUE)
     colnames(calibrated.tumor) <- colnames(tumor.data)
 
+
+    print("HERE")
     # save off each piece of our work as we go
     tn = c(log.tumor,log.normal)
+    print("HERE2")
     processed.data[[n]] = tn
 }
 
-# save off the data to a Rdata object for later
-save.off.processed.data(log.normals,log.tumors,calibrated.tumors,baits,paste(tangent.database.output,build.version,sep="/"),analysis.set.name,build.version)
+# save off the data to a Rdata object for later -- not anymore
+# save.off.processed.data(log.normals,log.tumors,calibrated.tumors,baits,paste(tangent.database.output,build.version,sep="/"),analysis.set.name,build.version)
+calibrated.tumor.values <- rbind(data.frame(processed.data[["autosome"]]),data.frame(processed.data[["X"]]),data.frame(processed.data[["Y"]]))
 
 # output the raw data and plots for each sample
 output.and.plot.data(calibrated.tumors,tumor.data,baits,output.location,signal.files)
