@@ -48,7 +48,8 @@ mean.center.log.transform = function(input.data) {
     td.mean = apply(input.data,2,mean)
     td.data = input.data / td.mean
     td.data[abs(td.data) < epsilon] = epsilon
-    log.input = data.frame(log2(td.data))
+    log.input = data.frame(log2(td.data),check.names=F)
+    #print(colnames(log.input))
     return(log.input)
 }
 

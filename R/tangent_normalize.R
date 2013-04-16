@@ -161,8 +161,8 @@ for (n in c("autosome",sex.chromosomes)) {
     # do the initial block normalization
     bgs.center = rep(mean(colMeans(log.normal)),nrow(log.normal)) # rep(0.0,nrow(normal.data)) # log.normals[,ncol(log.normals)] # rep(0.0,nrow(normal.data))
     names(bgs.center) <- rownames(log.normal)
-    log.normal = data.frame(log.normal[,1:ncol(log.normal)] - bgs.center)
-    log.tumor = data.frame(log.tumor - bgs.center)
+    log.normal = data.frame(log.normal[,1:ncol(log.normal)] - bgs.center,check.names=F)
+    log.tumor = data.frame(log.tumor - bgs.center,check.names=F)
 
     print(paste("Data loaded and means and log values calculated...",n))
     #load up the whole data set into the tangent normalization process, and calibrate each tumor against the matrix
@@ -172,8 +172,6 @@ for (n in c("autosome",sex.chromosomes)) {
     }
 
     target.intersect <- intersect(rownames(log.normal),rownames(log.tumor))
-    print(dim(log.normal))
-    print(dim(log.tumor))
     log.normal <- intersect.tumor.normal.targets(log.normal,target.intersect)
     log.tumor <- intersect.tumor.normal.targets(log.tumor,target.intersect)
 
@@ -183,18 +181,15 @@ for (n in c("autosome",sex.chromosomes)) {
     calibrated.tumor <- calibrate.tumors(data.matrix(log.tumor),data.matrix(pseudo.inverse.norm),data.matrix(log.normal),bgs.center,first=TRUE)
     colnames(calibrated.tumor) <- colnames(tumor.data)
 
-
-    print("HERE")
     # save off each piece of our work as we go
-    tn = c(log.tumor,log.normal)
-    print("HERE2")
+    tn = calibrated.tumor# log.tumor) # ,log.normal)
     processed.data[[n]] = tn
 }
 
 # save off the data to a Rdata object for later -- not anymore
 # save.off.processed.data(log.normals,log.tumors,calibrated.tumors,baits,paste(tangent.database.output,build.version,sep="/"),analysis.set.name,build.version)
-calibrated.tumor.values <- rbind(data.frame(processed.data[["autosome"]]),data.frame(processed.data[["X"]]),data.frame(processed.data[["Y"]]))
-
+calibrated.tumors <- rbind(data.frame(processed.data[["autosome"]]),data.frame(processed.data[["X"]]),data.frame(processed.data[["Y"]]))
+rownames(calibrated.tumors) <- rownames(tumor.data)
 # output the raw data and plots for each sample
 output.and.plot.data(calibrated.tumors,tumor.data,baits,output.location,signal.files)
 
