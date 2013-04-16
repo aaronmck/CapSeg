@@ -49,9 +49,11 @@ vcf_input = open(args.vcf)
 # the actual final mapping -- we'll layer on each relation in turn
 normal_sample_to_bam = {}
 normal_bam_to_ind = {}
-#tumor_bam_to_sample = {}
+normal_bam_to_tumor_bam = {}
+tumor_bam_to_sample = {}
 
 final_normal_sample_to_tumor_sample = {}
+final_normal_sample_to_ind = {}
 
 # simple case, sample to bam in normal
 sm = open(args.normal_mapping,"r")
@@ -66,15 +68,26 @@ hdr = sm.readline()
 for line in sm:
     sp = line.strip().split("\t")
     normal_bam_to_ind[os.path.basename(sp[2])] = sp[0]
+    normal_bam_to_tumor_bam[os.path.basename(sp[2])] = os.path.basename(sp[1])
+
+# final go from tumor bam to tumor sample
+sm = open(args.tumor_mapping,"r")
+hdr = sm.readline()
+for line in sm:
+    sp = line.strip().split("\t")
+    tumor_bam_to_sample[os.path.basename(sp[0])] = sp[1]
 
 # now create the final mapping for each normal sample we have
 for key,value in normal_sample_to_bam.iteritems():
     if not normal_bam_to_ind.has_key(value):
         raise NameError("Unable to map the normal sample " + key + " to a individual")
     ind = normal_bam_to_ind[value]
+    final_normal_sample_to_ind[key] = ind
 
-    final_normal_sample_to_tumor_sample[key] = ind
-
+    tumor_bam = normal_bam_to_tumor_bam[value]
+    if not tumor_bam_to_sample.has_key(tumor_bam):
+        raise NameError("Unable to map the tumor bam " + tumor_bam + " to a tumor sample")
+    final_normal_sample_to_tumor_sample[key] = tumor_bam_to_sample[tumor_bam]
 
 sample_to_position = {}
 sample_to_output = {}
@@ -97,13 +110,13 @@ for line in vcf_input:
 
         # now find each of the samples
         samples = sp[9:len(sp)]
-        for key, value in final_normal_sample_to_tumor_sample.iteritems():
+        for key, value in final_normal_sample_to_ind.iteritems():
             if not key in samples:
                 raise NameError("Sample name " + key + " missing from the input file")
             sample_to_position[key] = samples.index(key)
         header_loaded = True
 
-        for key, value in final_normal_sample_to_tumor_sample.iteritems():
+        for key, value in final_normal_sample_to_ind.iteritems():
             if not os.path.exists(args.outputdir):
                 os.makedirs(args.outputdir)
             flname = open(os.path.join(args.outputdir,value +".bed"),"w")
@@ -156,12 +169,12 @@ marker = open(os.path.join(args.outputdir,"complete.marker"),"w")
 marker.close()
 
 hetname = open(args.sex_file,"w")
-hetname.write("sample\thet_calls\ttotal_sites\tcall\tratio\n")
+hetname.write("individual\tsample\thet_calls\ttotal_sites\tcall\tratio\n")
 # write out each samples het call, het total, and the call
 for key, value in het_totals.iteritems():
     call = "MALE"
     if float(het_calls[key])/float(value) > args.het_ratio:
         call = "FEMALE"
-    hetname.write(final_normal_sample_to_tumor_sample[key] + "\t" + str(het_calls[key]) + "\t" + str(value) + "\t" + str(call) + "\t" + str(float(het_calls[key])/float(value)) + "\n")
+    hetname.write(final_normal_sample_to_ind[key] + "\t" + str(final_normal_sample_to_tumor_sample[key]) + "\t" + str(het_calls[key]) + "\t" + str(value) + "\t" + str(call) + "\t" + str(float(het_calls[key])/float(value)) + "\n")
 
 
