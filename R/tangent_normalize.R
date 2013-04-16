@@ -10,30 +10,29 @@ library(optparse)
 # require("genomic_plot.R")
 option.list <- list(
 		# we include the R dat files from
-		make_option(c("--normal.lane.data"),help="the normal exome coverage: lanes as rows, exome targets (or baits) as rows",default="./"),
-		make_option(c("--tumor.lane.data"),help="the tumor exome coverage: lanes as rows, exome targets (or baits) as rows",default="blank"),
-		make_option(c("--target.list"),help="the list of targets we captured in sequencing",default="blank"),
-		make_option(c("--use.cache"),help="should we use the cached data from a previous run (if available)?",default="blank"),
-		make_option(c("--cache.location"),help="where we should look for cached data (if use_cached_data is set), and where we should save data to post-processing",default="blank"),
-		make_option(c("--script.dir"),help="where we can find the wesseg scripts - where you placed the checked out tool into",default="blank"),
-		make_option(c("--normal.sample.to.lanes.file"),help="the file containing the mapping of the read groups to the sample names (for normals)",default="blank"),
-		make_option(c("--tumor.sample.to.lanes.file"),help="the file containing the mapping of the read groups to the sample names (for tumors)",default="blank"),
-        make_option(c("--normal.to.bam"),help="the file matching the normal bam to the sample",default="blank"),
-		make_option(c("--tumor.to.bam"),help="the file matching for tumor bam to the sample",default="blank"),
-		make_option(c("--output.location"),help="where to write output files to - the segmentation results plus any graphs",default="blank"),
-		make_option(c("--tangent.database.location"),help="the directory of tangent planes to normalize against; this directory should contain only tangent planes",default="blank"),
-		make_option(c("--output.tangent.database"),help="the directory where we put the output tangent data",default="blank"),
-		make_option(c("--build"),help="are we running with hg18 and hg19",default="blank"),
-		make_option(c("--analysis.set.name"),help="what was the name of the analysis set",default="blank"),
-		make_option(c("--bylane"),help="is the data coming in by lane? (if not it should be by sample)",default="blank"),
-		make_option(c("--parallel"),help="should we merge lanes to samples in parallel",default="blank"),
-        make_option(c("--bait.factor"),help="the bait factor data file",default="blank"),
-        make_option(c("--bam.file.listing"),help="the listing of bam files, by tumor and by normal",default="blank"),
-        make_option(c("--signal.files"),help="the sample name to signal file",default="blank"),
-        make_option(c("--use.histo.data"),help="should we use historical data",default="blank"),
-        make_option(c("--debug"),help="dump lots of debugging data to the <output_dir>/debug directory",default="blank"),
-        make_option(c("--sex.chromosomes"),help="Any sex chromosomes; each with by tangent normalized by itself. Seperate a list with a comma, no spaces",default="blank")
-        make_option(c("--call.database"),help="Where to get calls from",default="blank")
+               make_option(c("--normal.lane.data"),help="the normal exome coverage: lanes as rows, exome targets (or baits) as rows",default="./"),
+               make_option(c("--tumor.lane.data"),help="the tumor exome coverage: lanes as rows, exome targets (or baits) as rows",default="blank"),
+               make_option(c("--target.list"),help="the list of targets we captured in sequencing",default="blank"),
+               make_option(c("--use.cache"),help="should we use the cached data from a previous run (if available)?",default="blank"),
+               make_option(c("--cache.location"),help="where we should look for cached data (if use_cached_data is set), and where we should save data to post-processing",default="blank"),
+               make_option(c("--script.dir"),help="where we can find the wesseg scripts - where you placed the checked out tool into",default="blank"),
+               make_option(c("--normal.sample.to.lanes.file"),help="the file containing the mapping of the read groups to the sample names (for normals)",default="blank"),
+               make_option(c("--tumor.sample.to.lanes.file"),help="the file containing the mapping of the read groups to the sample names (for tumors)",default="blank"),
+               make_option(c("--normal.to.bam"),help="the file matching the normal bam to the sample",default="blank"),
+               make_option(c("--tumor.to.bam"),help="the file matching for tumor bam to the sample",default="blank"),
+               make_option(c("--output.location"),help="where to write output files to - the segmentation results plus any graphs",default="blank"),
+               make_option(c("--tangent.database.location"),help="the directory of tangent planes to normalize against; this directory should contain only tangent planes",default="blank"),
+               make_option(c("--output.tangent.database"),help="the directory where we put the output tangent data",default="blank"),
+               make_option(c("--build"),help="are we running with hg18 and hg19",default="blank"),
+               make_option(c("--analysis.set.name"),help="what was the name of the analysis set",default="blank"),
+               make_option(c("--bylane"),help="is the data coming in by lane? (if not it should be by sample)",default="blank"),
+               make_option(c("--parallel"),help="should we merge lanes to samples in parallel",default="blank"),
+               make_option(c("--bait.factor"),help="the bait factor data file",default="blank"),
+               make_option(c("--bam.file.listing"),help="the listing of bam files, by tumor and by normal",default="blank"),
+               make_option(c("--signal.files"),help="the sample name to signal file",default="blank"),
+               make_option(c("--use.histo.data"),help="should we use historical data",default="blank"),
+               make_option(c("--debug"),help="dump lots of debugging data to the <output_dir>/debug directory",default="blank"),
+               make_option(c("--sex.chromosomes"),help="Any sex chromosomes; each with by tangent normalized by itself. Seperate a list with a comma, no spaces",default="blank")
 )
 opt <- parse_args(OptionParser(option_list=option.list))
 
