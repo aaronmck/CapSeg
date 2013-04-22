@@ -37,3 +37,19 @@ load.float.exome.data = function(
 	# raw2 <- join(baits,raw,by = (baits$name,rownames(raw)),type="left")
 	return(raw)
 }
+
+# for the tumor samples, return a
+#' @param data the data csv file name
+#' @param baits the baits name
+#' @param removeBadBaitsAndLanes remove the bad baits and lanes from the matrix
+#' @param minimumBaitOverlap we require at least this ratio of overlap between the bait names and the pulldown capture names
+#' @return a data matrix of the coverage
+#' @keywords exome coverage
+#'
+process.sex.assignments <- function(sex.calls,tumor.samples) {
+    # open the sex calls file
+    s.calls <- read.delim(sex.calls)
+    is.male = s.calls$call == "MALE"
+    return(is.male[order(match(s.calls$sample,tumor.samples))])
+}
+

@@ -16,16 +16,18 @@ option.list <- list(
 )
 opt <- parse_args(OptionParser(option_list=option.list))
 
-
+# not sure if these should be parameters
 drop.x= TRUE
 drop.y= TRUE
 min.seg.size= 10
 verbose= TRUE
-base.output.dir= "AllelicCapseg_results/Brain_mets_AllelicCapseg_03.05"
-capseg.probe.fn= "/xchip/cga2/bryanh/HAPSEG/hapseg_extreme/brain.mets/capseg.results/PB-PB0036-TM-NT-SM-2O41H-SM-2O41I.tsv"
-capseg.seg.fn= "/xchip/cga4/home/peleg/METS_CapSeg77TM_NT/cbs/PB-PB0036-TM-NT-SM-2O41H-SM-2O41I.seg.txt"
-germline.het.fn= "/xchip/cga4/home/peleg/METS_germline/hetReadCounts/PB-PB0036-Tumor-SM-2O41H.cov"
-SID= "PB-PB0036-TM-NT-SM-2O41H-SM-2O41I"
+
+# where to put our output
+base.output.dir= opt$output.dir
+capseg.probe.fn= opt$probe.file # "/xchip/cga2/bryanh/HAPSEG/hapseg_extreme/brain.mets/capseg.results/PB-PB0036-TM-NT-SM-2O41H-SM-2O41I.tsv"
+capseg.seg.fn= opt$segment.file # "/xchip/cga4/home/peleg/METS_CapSeg77TM_NT/cbs/PB-PB0036-TM-NT-SM-2O41H-SM-2O41I.seg.txt"
+germline.het.fn= opt$coverage.file # "/xchip/cga4/home/peleg/METS_germline/hetReadCounts/PB-PB0036-Tumor-SM-2O41H.cov"
+SID= opt$sample.name # "PB-PB0036-TM-NT-SM-2O41H-SM-2O41I"
 #library(HAPSEG)
 
 CODE_DIR = "~scarter/HAPSEG/"

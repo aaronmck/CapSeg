@@ -181,7 +181,7 @@ class CapSeg extends QScript {
     add(new VCFToBED(vcfFile, alleleFreq, normalBamToSampleFile, tumorBamToSampleFile, samples, libraryDir, depFile, sexFile))
 
     // for each tumor convert the associated normal sample BED file from the above step with the bam into an allele balance file
-    var acovFiles = addAlleleBalance(sampleObj.getTumorMap(),dbsnp, alleleFreq, depFile)
+    var acovFiles = addAlleleBalance(sampleObj.getTumorMap(),dbsnp, alleleFreq, depFile, reference)
 
     for ((sample, tumor) <- sampleObj.getTumorMap) {
       val signalFile = new File(outputDir.getAbsolutePath() + "/signal/" + sample + ".tsv")
@@ -234,13 +234,15 @@ class CapSeg extends QScript {
   }
 
   // get allelic information at the target het sites in a sample
-  def alleleBalance(bam: File, bed: File, dbSNP: File, output: File, dep: File) = {
+  def alleleBalance(bam: File, bed: File, dbSNP: File, output: File, dep: File, ref: File) = {
     val aBal = new AlleleCount
     aBal.input_file :+= bam
     aBal.DbSNP = dbSNP
     aBal.calls = bed
-    aBal.output = output
+    aBal.allelebalance = output
+    aBal.intervals :+= bed
     aBal.dependency = dep
+    aBal.reference_sequence = reference
     add(aBal)
   }
 
@@ -265,14 +267,14 @@ class CapSeg extends QScript {
   }
 
   // for each tumor sample, pull down the appropriate allele balance
-  def addAlleleBalance(tumorMap: Map[String, File], dbsnp: File, alleleFreq: File, depFile: File): List[File] = {
+  def addAlleleBalance(tumorMap: Map[String, File], dbsnp: File, alleleFreq: File, depFile: File, ref: File): List[File] = {
     var returnList = List[File]()
     for ((sample,bamfile) <- tumorMap) {
       println("sample = " + sample + " bam = " + bamfile)
       val output = alleleFreq + "/" + sample + ".acov"
       // now figure out what the normal BED file is called
       val bedfile = alleleFreq + "/" + sample + ".bed"
-      alleleBalance(bamfile, bedfile, dbsnp, output, depFile)
+      alleleBalance(bamfile, bedfile, dbsnp, output, depFile, ref)
       returnList ::= output
     }
     return(returnList)
@@ -377,7 +379,7 @@ class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_c
 
   @Argument(doc = "should we use the cache file") var useCache = useCachedData
   memoryLimit = Some(16) // change me
-  def commandLine = "Rscript %s/R/tangent_normalize.R --normal.lane.data %s --tumor.lane.data %s --target.list %s --use.cache %s --cache.location %s --script.dir %s --normal.sample.to.lanes.file %s --tumor.sample.to.lanes.file %s --output.location %s --tangent.database.location %s --output.tangent.database %s --build %s --analysis.set.name %s --bylane %s --bait.factor %s --signal.files %s --histo.data %s --sex.chromosomes %s".format(libDir.getAbsolutePath(), normalFile.getAbsolutePath(), tumorFile.getAbsolutePath(), targetFile.getAbsolutePath(), useCache, cacheLocation.getAbsolutePath(), libDir.getAbsolutePath(), normalSampleToReadGroupFile.getAbsolutePath(), tumorSampleToReadGroupFile.getAbsolutePath(), outputDirectory.getAbsolutePath(), tangentDatabase.getAbsolutePath(), tangentOutputDatabase.getAbsolutePath(), build, analysisSetName,byLaneData, nbf.getAbsolutePath(), signalTSVFile.getAbsolutePath(), uhd, sexFl.getAbsolutePath())
+  def commandLine = "Rscript %s/R/tangent_normalize.R --normal.lane.data %s --tumor.lane.data %s --target.list %s --use.cache %s --cache.location %s --script.dir %s --normal.sample.to.lanes.file %s --tumor.sample.to.lanes.file %s --output.location %s --tangent.database.location %s --output.tangent.database %s --build %s --analysis.set.name %s --bylane %s --bait.factor %s --signal.files %s --histo.data %s --sex.calls %s".format(libDir.getAbsolutePath(), normalFile.getAbsolutePath(), tumorFile.getAbsolutePath(), targetFile.getAbsolutePath(), useCache, cacheLocation.getAbsolutePath(), libDir.getAbsolutePath(), normalSampleToReadGroupFile.getAbsolutePath(), tumorSampleToReadGroupFile.getAbsolutePath(), outputDirectory.getAbsolutePath(), tangentDatabase.getAbsolutePath(), tangentOutputDatabase.getAbsolutePath(), build, analysisSetName,byLaneData, nbf.getAbsolutePath(), signalTSVFile.getAbsolutePath(), uhd, sexFl.getAbsolutePath())
 }
 
 // correct the output files for any dups lines and extra headers

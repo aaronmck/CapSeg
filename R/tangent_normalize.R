@@ -32,7 +32,7 @@ option.list <- list(
                make_option(c("--signal.files"),help="the sample name to signal file",default="blank"),
                make_option(c("--use.histo.data"),help="should we use historical data",default="blank"),
                make_option(c("--debug"),help="dump lots of debugging data to the <output_dir>/debug directory",default="blank"),
-               make_option(c("--sex.chromosomes"),help="Any sex chromosomes; each with by tangent normalized by itself. Seperate a list with a comma, no spaces",default="blank")
+               make_option(c("--sex.calls"),help="the sex chromosome assignment",default="blank")
 )
 opt <- parse_args(OptionParser(option_list=option.list))
 
@@ -80,7 +80,7 @@ normal.to.bam                   <- args$normal.to.bam
 signal.files                    <- args$signal.files
 use.histo.data                  <- toupper(args$use.histo.data) == "TRUE"
 debug                           <- toupper(args$debug) == "TRUE"
-sex.chromosome.list             <- toupper(args$sex.chromosomes)
+sex.calls                       <- args$sex.calls
 vcf.calls.file                  <- args$call.database
 
 # some constants to use
@@ -97,18 +97,11 @@ dir.create(output.location,recursive=T)
 dir.create(cached.location,recursive=T)
 debug.location = paste(output.location,"debug",sep="/")
 
-#if (debug) {
-    dir.create(debug.location,recursive=T)
-    # sink(paste(output.location,"debug","debugging_log.txt",sep="/"))
-    save.image(paste(debug.location,".parameters.Rdata",sep="/")) # save off a copy of the parameters we used for the run
-#}
+dir.create(debug.location,recursive=T)
+save.image(paste(debug.location,".parameters.Rdata",sep="/")) # save off a copy of the parameters we used for the run
 
 # load the tumor and the normal sample information
 print("Loading the sample tables from the file on disk...")
-
-# TODO: split out the sex chromosomes from the autosomes
-print(paste("Sex chromosome list is ",sex.chromosome.list))
-# sex.chromosomes = unlist(strsplit(sex.chromosome.list,","))
 
 tumorSampleTable = read.table(tumor.lanes.to.samples.file,header=T,stringsAsFactors=F,sep="\t")
 normalSampleTable = read.table(normal.lanes.to.samples.file,header=T,stringsAsFactors=F,sep="\t")
@@ -135,8 +128,6 @@ tumor.data <- intersect.tumor.normal.targets(tumor.data,target.intersect)
 
 # load up our bait factor
 print("Subsetting the data")
-print(dim(baits))
-print(dim(normal.data))
 baits.subset <- baits[is.element(baits$name,rownames(normal.data)),]
 bait.factor <- read.delim(bait.factor.file)
 bait.factor[bait.factor[,1]<=0,2] = epsilon
@@ -144,6 +135,16 @@ bait.factor = bait.factor[is.element(rownames(bait.factor),rownames(tumor.data))
 
 # mean center the tumor and normal samples
 tumor.data = sweep(tumor.data,2,apply(tumor.data,2,mean),"/")
+
+# get the sex assignments; a list of each sex with their associated columns
+sex.columns = process.sex.assignments(sex.calls,colnames(tumor.data))
+
+# order both our tumors and normals; females then males
+tumor.data <- cbind(tumor.data[!sex.columns],tumor.data[sex.columns])
+normal.data <- cbind(normal.data[!sex.columns],normal.data[sex.columns])
+
+# order the sex data
+sex.columns <- sex.columns[order(sex.columns)]
 
 # get a list of the split sex - autosomal data
 tumor.split = split.out.sex.chromosomes(tumor.data,sex.chromosomes,baits)
@@ -154,7 +155,7 @@ processed.data = list()
 
 # now normalize coverage across each of the split data (split by sex/autosomal data)
 for (n in c("autosome",sex.chromosomes)) {
-    print("Starting analysis...")
+    print(paste("Starting analysis for chromosome",n))
     log.tumor = mean.center.log.transform(tumor.split[[n]])
     log.normal = mean.center.log.transform(normal.split[[n]])
 
@@ -177,10 +178,36 @@ for (n in c("autosome",sex.chromosomes)) {
 
     print("About to perform the SVD (PI)")
 
-    pseudo.inverse.norm  <- pseudoinverse(data.matrix(log.normal))
-    calibrated.tumor <- calibrate.tumors(data.matrix(log.tumor),data.matrix(pseudo.inverse.norm),data.matrix(log.normal),bgs.center,first=TRUE)
-    colnames(calibrated.tumor) <- colnames(tumor.data)
+    # if we're a sex chromosome, split the two sample piles by their sex assignment
+    if (n != "autosome") {
+        calibrated.tumor = data.frame()
+        # split out the two piles, male and female
 
+        if (sum(!sex.columns) > 0) {
+            print("FEMALE")
+            females.ln = log.normal[,!sex.columns]
+            females.lt = log.tumor[,!sex.columns]
+            pseudo.inverse.norm  <- pseudoinverse(data.matrix(females.ln))
+            calibrated.tumor <- calibrate.tumors(data.matrix(females.lt),data.matrix(pseudo.inverse.norm),data.matrix(females.ln),bgs.center,first=TRUE)
+            colnames(calibrated.tumor) <- colnames(females.lt)
+        }
+
+        if (sum(sex.columns) > 0) {
+            print("HERE")
+            males.ln = log.normal[,sex.columns]
+            males.lt = log.tumor[,sex.columns]
+            pseudo.inverse.norm  <- pseudoinverse(data.matrix(males.lt))
+            calibrated.tumor <- cbind(calibrated.tumor,calibrate.tumors(data.matrix(males.lt),data.matrix(pseudo.inverse.norm),data.matrix(males.ln),bgs.center,first=TRUE))
+            print(dim(calibrated.tumor))
+            print(length(c(colnames(calibrated.tumor)[!sex.columns],colnames(males.lt))))
+            colnames(calibrated.tumor) <- c(colnames(calibrated.tumor)[!sex.columns],colnames(males.lt))
+        }
+    }
+    else {
+        pseudo.inverse.norm  <- pseudoinverse(data.matrix(log.normal))
+        calibrated.tumor <- calibrate.tumors(data.matrix(log.tumor),data.matrix(pseudo.inverse.norm),data.matrix(log.normal),bgs.center,first=TRUE)
+        colnames(calibrated.tumor) <- colnames(tumor.data)
+    }
     # save off each piece of our work as we go
     tn = calibrated.tumor# log.tumor) # ,log.normal)
     processed.data[[n]] = tn
@@ -188,10 +215,11 @@ for (n in c("autosome",sex.chromosomes)) {
 
 # save off the data to a Rdata object for later -- not anymore
 # save.off.processed.data(log.normals,log.tumors,calibrated.tumors,baits,paste(tangent.database.output,build.version,sep="/"),analysis.set.name,build.version)
-calibrated.tumors <- rbind(data.frame(processed.data[["autosome"]]),data.frame(processed.data[["X"]]),data.frame(processed.data[["Y"]]))
+calibrated.tumors <- rbind(data.frame(processed.data[["autosome"]],check.names=F),data.frame(processed.data[["X"]],check.names=F),data.frame(processed.data[["Y"]],check.names=F))
 rownames(calibrated.tumors) <- rownames(tumor.data)
+
 # output the raw data and plots for each sample
 output.and.plot.data(calibrated.tumors,tumor.data,baits,output.location,signal.files)
 
 # output metrics for each sample
-create.sample.metric.files(calibrated.tumors,log.tumors,output.location)
+create.sample.metric.files(calibrated.tumors,mean.center.log.transform(tumor.data),output.location)

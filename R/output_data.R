@@ -27,7 +27,7 @@ output.and.plot.data <- function(tumor.matrix,tumors.cr,baits,output.location,si
 	print(sgn.files)
 	print(summary(tumor.matrix))
 	for (name in colnames(tumor.matrix)) {
-                name = sub(".","-",name)
+                print(name)
 		if (sum(is.na(tumor.matrix[,name])) > 0) {
 			print(paste("Skipping sample",name))
 			next()
