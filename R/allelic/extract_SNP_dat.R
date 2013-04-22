@@ -11,19 +11,20 @@
 
 
 
-ExtractCaptureDat <- function(capseg.probe.fn=NULL, seg.dat, germline.het.fn, verbose=FALSE, germline.het.file.parser=DefaultGermlineHetFileParser) 
+ExtractCaptureDat <- function(capseg.probe.fn=NULL, seg.dat, germline.het.fn, verbose=FALSE, germline.het.file.parser=DefaultGermlineHetFileParser)
 {
   capseg.d = DefaultCapsegFileParser(capseg.probe.fn)
+  print("HEREREERERER")
   germline.hets = germline.het.file.parser(germline.het.fn )
-  
+  print("HEREREERERER2")
   h.seg.dat <- GetCaptureAsSegs(seg.dat, capseg.d, germline.hets, verbose=verbose)
-
+  print("HEREREERERER2222")
   return(list(seg.dat=seg.dat, as.res=list(h.seg.dat=h.seg.dat)))
 }
 
 
 ExtractArrayDat <- function(array.name, genome.build, use.pop, use.normal,
-  normal, impute.gt, adj.atten, platform, 
+  normal, impute.gt, adj.atten, platform,
   seg.dat, snp.fn, cn.fn,
   calls.fn, mn.sample,
   calibrate.data=FALSE, clusters.fn=NULL, verbose=FALSE,
@@ -45,7 +46,7 @@ ExtractArrayDat <- function(array.name, genome.build, use.pop, use.normal,
 
   snp.data <- snp.file.parser(snp.fn, sample.name=array.name, verbose=verbose)
 
-  ## the allele frequency data 
+  ## the allele frequency data
   if (calibrate.data) {
     if (is.null(clusters.fn)) {
       stop("Calibrating data, but there is no clusters file!")
@@ -53,7 +54,7 @@ ExtractArrayDat <- function(array.name, genome.build, use.pop, use.normal,
     if (verbose) {
       print("Calibrating data")
     }
-    snp.d <- CalibrateAsDat(snp.data, clusters.fn, 
+    snp.d <- CalibrateAsDat(snp.data, clusters.fn,
       clusters.file.parser=clusters.file.parser,
       verbose=verbose)
    } else {
@@ -67,29 +68,29 @@ ExtractArrayDat <- function(array.name, genome.build, use.pop, use.normal,
   snp.d <- PostCalibrateAsDat(snp.d, post.birdseed.calibration[["snp.tx"]],
    adj.atten=adj.atten, verbose=verbose)
   ####
-  
+
   nas <- apply(is.na(snp.d), 1, sum)
   snp.d <- snp.d[nas == 0, ]
-  
+
   # No calibration is needed for cn probes because they have already been calibrated in SnpPipeline
   # Just remove NAs
-  
+
   cn.d <- cn.file.parser(cn.fn)
   nas <- apply(is.na(cn.d), 1, sum)
-  cn.d <- cn.d[nas == 0, ,drop=F] 
-  
+  cn.d <- cn.d[nas == 0, ,drop=F]
+
   as.res <- GetArrayAlleleSegData(snp.d, cn.d, snp.annot, glad.mat=seg.dat,
    snp.freqs, use.pop, use.normal,
    normal, NA, dbSNP.annot, impute.gt,
    calls.fn, mn.sample, verbose=verbose)
-  
+
   return(list(seg.dat=seg.dat, as.res=as.res))
 }
 
 ## TODO: tumor.sample.barcode is no longer used / needed
 ## Fix code that calls this functon and remove arg.
 ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.pop, use.normal,
-  normal, impute.gt, adj.atten, platform, 
+  normal, impute.gt, adj.atten, platform,
   seg.dat, snp.fn=NULL, cn.fn,  capseg.probe.fn=NULL, germline.het.fn, tumor.sample.barcode,
   calls.fn, mn.sample,
   calibrate.data=FALSE, clusters.fn=NULL, verbose=FALSE,
@@ -101,7 +102,7 @@ ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.po
 	## Returns:
 	## seg.dat - segmentation data file
 	## as.res - allele specific segmentation data from all probe types
-	
+
 
   data(list=GetPlatformDataName(platform), package="HAPSEG")
   if (! genome.build %in% names(platform.annots)) {
@@ -120,7 +121,7 @@ ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.po
   if (!is.null(snp.fn)){
     snp.data <- snp.file.parser(snp.fn, sample.name=array.name, verbose=verbose)
 
-  	## the allele frequency data 
+  	## the allele frequency data
   	if (calibrate.data) {
   		if (is.null(clusters.fn)) {
   			stop("Calibrating data, but there is no clusters file!")
@@ -128,7 +129,7 @@ ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.po
   		if (verbose) {
   			print("Calibrating data")
   		}
-  		snp.d <- CalibrateAsDat(snp.data, clusters.fn, 
+  		snp.d <- CalibrateAsDat(snp.data, clusters.fn,
         clusters.file.parser=clusters.file.parser,
         verbose=verbose)
      } else {
@@ -142,30 +143,30 @@ ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.po
   	snp.d <- PostCalibrateAsDat(snp.d, post.birdseed.calibration[["snp.tx"]],
      adj.atten=adj.atten, verbose=verbose)
   	####
-  	
+
   	nas <- apply(is.na(snp.d), 1, sum)
   	snp.d <- snp.d[nas == 0, ]
-  	
+
   	# No calibration is needed for cn probes because they have already been calibrated in SnpPipeline
   	# Just remove NAs
-  	
+
   	cn.d <- cn.file.parser(cn.fn)
   	nas <- apply(is.na(cn.d), 1, sum)
-  	cn.d <- cn.d[nas == 0, ,drop=F] 
-     
+  	cn.d <- cn.d[nas == 0, ,drop=F]
+
   }
-	
+
   if (!is.null(capseg.probe.fn)) {
   	capseg.d = capseg.file.parser(capseg.probe.fn)
   	germline.hets = germline.het.file.parser(germline.het.fn )
-      
+
   }
-	
+
 	as.res <- GetAlleleSegData(snp.d, cn.d, capseg.d, germline.hets, snp.annot, glad.mat=seg.dat,
    snp.freqs, use.pop, use.normal,
    normal, NA, dbSNP.annot, impute.gt,
    calls.fn, mn.sample, verbose=verbose)
-	
+
 	return(list(seg.dat=seg.dat, as.res=as.res))
 }
 
@@ -174,16 +175,16 @@ CreateMergedSegFile <- function(array.seg.fn, capseg.seg.fn, drop.x, drop.y) {
   # Output seg file is a seg file from the union of breakpoints of the input seg files.
 
   if (!is.null(array.seg.fn)) {
-    array.seg.dat <- ReadGladMat(array.seg.fn, array.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, type="snp", 
+    array.seg.dat <- ReadGladMat(array.seg.fn, array.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, type="snp",
       verbose=verbose)[[1]]
   }
   if (!is.null(capseg.seg.fn)) {
-    capseg.seg.dat <- ReadGladMat(capseg.seg.fn, capseg.sample.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, 
+    capseg.seg.dat <- ReadGladMat(capseg.seg.fn, capseg.sample.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y,
       type="capseg", verbose=verbose)[[1]]
-  } 
+  }
 
 
-  
+
   if (!is.null(array.seg.fn) & !is.null(capseg.seg.fn)) {
     seg.dat = MergeSegs(array.seg.dat, capseg.seg.dat)
   } else if (is.null(array.seg.fn)) {
@@ -203,7 +204,7 @@ ExtractSnpDat <- function(sample.name, genome.build, use.pop, use.normal,
   normal, impute.gt, adj.atten, platform, seg.fn,
   snp.fn, drop.x, drop.y, calls.fn, mn.sample,
   calibrate.data=FALSE, clusters.fn=NULL, verbose=FALSE,
-  snp.file.parser=DefaultSnpFileParser, 
+  snp.file.parser=DefaultSnpFileParser,
   clusters.file.parser=DefaultClusterFileParser) {
   ## Returns:
   ## seg.dat - segmentation data file
@@ -221,15 +222,15 @@ ExtractSnpDat <- function(sample.name, genome.build, use.pop, use.normal,
   dbSNP.annot <- platform.vals[["dbSNP.annot"]]
   snp.annot <- platform.vals[["snp.annot"]]
   post.birdseed.calibration <- platform.vals[["post.birdseed.calibration"]]
-  
+
   ## read the segmentation data in
   seg.dat <- ReadGladMat(seg.fn, sample.name, glad.log=TRUE,
    drop.x=drop.x, drop.y=drop.y, verbose=verbose)
 
 
   allele.data <- snp.file.parser(snp.fn, verbose=verbose)
-  
-  ## the allele frequency data 
+
+  ## the allele frequency data
   if (calibrate.data) {
     if (is.null(clusters.fn)) {
       stop("Calibrating data, but there is no clusters file!")
@@ -237,7 +238,7 @@ ExtractSnpDat <- function(sample.name, genome.build, use.pop, use.normal,
     if (verbose) {
       print("Calibrating data")
     }
-    as.d <- CalibrateAsDat(allele.data, clusters.fn, 
+    as.d <- CalibrateAsDat(allele.data, clusters.fn,
      clusters.file.parser=clusters.file.parser,
      verbose=verbose)
     } else {
@@ -252,7 +253,7 @@ ExtractSnpDat <- function(sample.name, genome.build, use.pop, use.normal,
 #  as.d <- PostCalibrateAsDat(as.d, post.birdseed.calibration[["snp.tx"]],
 #                             adj.atten=adj.atten, verbose=verbose)
 	####
-	
+
   nas <- apply(is.na(as.d), 1, sum)
   as.d <- as.d[nas == 0, ]
 
@@ -289,7 +290,7 @@ ReadDicedSnpPipelineFile <- function(fn, sample.name) {
 
 ReadDicedCnPipelineFile <- function(cn.fn) {
 	# Bryan Hernandez
-	
+
 	cn <- read.delim(cn.fn, as.is=TRUE)
 	## There's an extra header line in here
 	cn <- cn[-1, ]
@@ -339,7 +340,7 @@ SnpToBin <- function(fn, col.name) {
 ## FIXME: can this be made better?
 split.snp.file <- function(SNP.FN) {
   tbl <- read.table(SNP.FN,skip=2,header=F)
-  
+
   colnames(tbl) <- c("SNP","signal")
   tbl <- tbl[substr(tbl$SNP,1,3)=="SNP",]
 
@@ -357,7 +358,7 @@ split.snp.file <- function(SNP.FN) {
     print("uneven number of rows in the data: ",nrow(a.col),nrow(b.col))
     q(status=1)
   }
-  
+
   ## should we really dig in and check our results?
   check.results = FALSE # turning this on is really expensive
   if (check.results) {

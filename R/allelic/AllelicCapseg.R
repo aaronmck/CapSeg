@@ -1,8 +1,10 @@
 
 AllelicCapseg = function( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, base.output.dir, min.seg.size, drop.x, drop.y,  verbose=FALSE )
 {
-   results.dir=file.path(base.output.dir, "results" ); dir.create(results.dir, recurs=TRUE)
-   plots.dir=file.path(base.output.dir, "plots", SID ); dir.create(plots.dir, recurs=TRUE)
+    print(base.output.dir)
+    print(SID)
+   results.dir=file.path(base.output.dir, "results" ); print(results.dir); if (!file.exists(results.dir)) { dir.create(results.dir, recurs=TRUE)}
+   plots.dir=file.path(base.output.dir, "plots", SID ); print(plots.dir); if (!file.exists(plots.dir)) { dir.create(plots.dir, recurs=TRUE)}
 
 
    result_FN = file.path(base.output.dir, paste(SID, ".AllelicCapseg.rds", sep="") )
@@ -23,18 +25,18 @@ AllelicCapseg = function( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, 
       iams.res <- cap.dat
       iams.res[["em.fit"]] <- CaptureHscrSegFit(cap.dat[["as.res"]][["h.seg.dat"]], tol=1e-5, verbose=verbose)
 
-      saveRDS( iams.res, file=result_FN)  
+      saveRDS( iams.res, file=result_FN)
    }
    else
    {
-      iams.res = readRDS(result_FN) 
+      iams.res = readRDS(result_FN)
    }
 
-## Save output 
+## Save output
    out.tab <- AbsolutePostProcess(iams.res, seg.dat)
    write.tab(out.tab, file=file.path(results.dir, paste(SID, ".tsv", sep="")) )
 
-## Plotting ## 
+## Plotting ##
    # images are automatically saved in results.dir / plots / subdir
    PlotAllCapture(iams.res, save=TRUE, plots.dir )
 }

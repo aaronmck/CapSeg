@@ -180,17 +180,26 @@ class CapSeg extends QScript {
     val sexFile = new File(alleleFreq + "/sex.calls")
     add(new VCFToBED(vcfFile, alleleFreq, normalBamToSampleFile, tumorBamToSampleFile, samples, libraryDir, depFile, sexFile))
 
-    // for each tumor convert the associated normal sample BED file from the above step with the bam into an allele balance file
-    var acovFiles = addAlleleBalance(sampleObj.getTumorMap(),dbsnp, alleleFreq, depFile, reference)
-
+    var srcDir = new File(libraryDir.getAbsolutePath() + "/R/allelic/")
+    var outAllelicDir = new File(outputDir + "/allelicCapSeg/")
+    var alleleOutput = List[File]()
     for ((sample, tumor) <- sampleObj.getTumorMap) {
       val signalFile = new File(outputDir.getAbsolutePath() + "/signal/" + sample + ".tsv")
       val segmentFile = new File(outputDir.getAbsolutePath() + "/segments/" + sample + ".seg.txt")
+
+      val output = alleleFreq + "/" + sample + ".acov"
+      alleleOutput ::= output
+      // now figure out what the normal BED file is called
+      val bedfile = alleleFreq + "/" + sample + ".bed"
+      alleleBalance(tumor, bedfile, dbsnp, output, depFile, reference)
+
       add(new SegmentSample(libraryDir,
                             new File(tumor).getName,
                             tumorBamToSampleFile,
                             segmentFile,
                             signalFile))
+      add(new AllelicCapSeg(signalFile, outAllelicDir, segmentFile, output, tumor, srcDir, libraryDir, tumorBamToSampleFile))
+
       signal ::= signalFile
       sampleToSignal.write(sample + "\t" + signalFile.getAbsolutePath + "\n")
       firehoseInport.write(sample + "\t" + segmentFile.getAbsolutePath + "\n")
@@ -217,7 +226,7 @@ class CapSeg extends QScript {
                             signal,
                             signalFile,
                             useHistData,
-                            acovFiles,
+                            alleleOutput,
                             sexFile))
   }
 
@@ -263,20 +272,6 @@ class CapSeg extends QScript {
       sFile.write(sample + "\t" + outputPost + "\t" + outputCRStat + "\t" + outputColSums + "\n")
     }
     sFile.close()
-    return(returnList)
-  }
-
-  // for each tumor sample, pull down the appropriate allele balance
-  def addAlleleBalance(tumorMap: Map[String, File], dbsnp: File, alleleFreq: File, depFile: File, ref: File): List[File] = {
-    var returnList = List[File]()
-    for ((sample,bamfile) <- tumorMap) {
-      println("sample = " + sample + " bam = " + bamfile)
-      val output = alleleFreq + "/" + sample + ".acov"
-      // now figure out what the normal BED file is called
-      val bedfile = alleleFreq + "/" + sample + ".bed"
-      alleleBalance(bamfile, bedfile, dbsnp, output, depFile, ref)
-      returnList ::= output
-    }
     return(returnList)
   }
 
@@ -410,6 +405,23 @@ class VCFToBED(vcfFile: File, outputDir: File, normalBamToSample: File, tumorBam
 
   def commandLine = "python %s/utils/python/vcf_to_bed.py --vcf %s --outputdir %s -nmap %s -tmap %s -imap %s -sf %s".format(loc.getAbsolutePath(),vcf.getAbsolutePath(),outputDir.getAbsolutePath(),nmap.getAbsolutePath(),tmap.getAbsolutePath(),imap.getAbsolutePath(), sCalls.getAbsolutePath());
 }
+
+
+// get allelic capseg data
+class AllelicCapSeg(probeFL: File, outputDir: File, segmentFile: File, covFile: File, bamName: File, codeDir: File, baseScript: File, bamToSmp: File) extends CommandLineFunction {
+  @Input(doc = "the probe file") var probe = probeFL
+  @Argument(doc = "code directory; where to find the rest of the R code") var code = codeDir
+  @Input(doc = "output directory") var out = outputDir
+  @Input(doc = "the segment file") var seg = segmentFile
+  @Input(doc = "the coverage file") var cov = covFile
+  @Input(doc = "the bam name") var bam = bamName
+  @Input(doc = "the bam to sample file") var bamToSample = bamToSmp
+  @Argument(doc = "where to find the base directory") var loc = baseScript
+  memoryLimit = Some(2)
+
+  def commandLine = "Rscript %s/R/allelic_capseg.R --output.dir %s --probe.file %s --segment.file %s --coverage.file %s --bam.name %s --source.directory %s --bam.to.sample %s".format(loc.getAbsolutePath(),out.getAbsolutePath(),probe.getAbsolutePath(),seg.getAbsolutePath(),cov.getAbsolutePath(),bam,code.getAbsolutePath(),bamToSample.getAbsolutePath());
+}
+
 
 // ------------------------------------------------------------------
 // -------------------- utility classes -----------------------------
