@@ -16,11 +16,14 @@ library(optparse)
 # require("genomic_plot.R")
 option_list <- list(
                     # we include the R dat files from
-                    make_option(c("--bam.file.name"),help="our bam file name",default="./"),
-                    make_option(c("--bam.to.sample.file"),help="bam to sample file",default="error"),
-                    make_option(c("--signal.file"),help="the signal directory",default="error"),
-                    make_option(c("--r.dir"),help="the r source directory",default="error"),
-                    make_option(c("--output.filename"),help="the output directory",default="error")
+               make_option(c("--bam.file.name"),help="our bam file name",default="./"),
+               make_option(c("--bam.to.sample.file"),help="bam to sample file",default="error"),
+               make_option(c("--signal.file"),help="the signal directory",default="error"),
+               make_option(c("--r.dir"),help="the r source directory",default="error"),
+               make_option(c("--output.filename"),help="the output directory",default="error"),
+               make_option(c("--alpha"),help="the alpha cutoff level",default="0.001"),
+               make_option(c("--undo.splits"),help="the split rejoining approach",default="sdundo"),
+               make_option(c("--undo.SD"),help="the SD cutoff",default="1.5")
                     )
 opt <- parse_args(OptionParser(option_list=option_list))
 
@@ -32,6 +35,9 @@ bam.to.sample.file = opt$bam.to.sample.file
 output.location = opt$output.location
 output.filename = opt$output.filename
 signal.file = opt$signal.file
+alpha = as.numeric(opt$alpha)
+undo.splits = opt$undo.splits
+undo.SD = as.numeric(opt$undo.SD)
 
 # use vega for the segmentation - it has worked better than CBS for our applications
 library("DNAcopy")
@@ -80,7 +86,9 @@ createSegmentationForAllContig2 <- function(tumor.data,sample.name) {
                # run the segmentation algorithm - CBS
                cna_data <- CNA(genomdat=as.matrix(temp.data[,5]), chrom=temp.data$contig, maploc=as.matrix(temp.data$start+(temp.data$stop-temp.data$start)), data.type=c("logratio"), sampleid=colnames(tumor.data)[5])
                smoothed.CNA.object <- smooth.CNA(cna_data)
-               results <- segment(smoothed.CNA.object) # ,alpha=0.1,nperm=5000)
+               # old approach: results <- segment(smoothed.CNA.object) # ,alpha=0.1,nperm=5000)
+
+               results <- segment(smoothed.CNA.object,alpha = alpha,undo.splits = undo.splits, undo.SD = undo.SD) # ,alpha=0.1,nperm=5000)
                return (results$output)
           }
 print("Data has been loaded...")

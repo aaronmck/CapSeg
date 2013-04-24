@@ -87,6 +87,16 @@ class CapSeg extends QScript {
   @Input(doc = "tangent normalization output database location", shortName = "tndo", required = false)
   var tangentOutputLocation = new File("/xchip/cga2/aaron/static/normal_subspaces/")
 
+  // ------------- segmentation parameters; used to when segmenting the signal for each sample ---------------
+  @Argument(doc = "the alpha value to use for the cutoff in segmentation", shortName = "sav", required = false)
+  var segmentAlpha = "0.001"
+
+  @Argument(doc = "the undo splits method", shortName = "ssm", required = false)
+  var segmentSplits = "sdundo"
+
+  @Argument(doc = "the segment SD setting", shortName = "ssd", required = false)
+  var segmentSD = "1.5"
+
   // the command line traits -- defaults for our pipeline
   trait CommandLineGATKArgs extends CommandLineGATK {
     this.reference_sequence = reference
@@ -197,7 +207,10 @@ class CapSeg extends QScript {
                             new File(tumor).getName,
                             tumorBamToSampleFile,
                             segmentFile,
-                            signalFile))
+                            signalFile,
+                            segmentAlpha,
+                            segmentSplits,
+                            segmentSD))
       add(new AllelicCapSeg(signalFile, outAllelicDir, segmentFile, output, tumor, srcDir, libraryDir, tumorBamToSampleFile))
 
       signal ::= signalFile
@@ -331,15 +344,19 @@ class MergeCoverage(analysis: String, tumorFile: File, normalFile: File, interva
 
 
 // segment samples
-class SegmentSample(libraryDir: File, bamName: String, bamToSample: File, outputFl: File, signalFl: File) extends CommandLineFunction {
+class SegmentSample(libraryDir: File, bamName: String, bamToSample: File, outputFl: File, signalFl: File, alpha: String, splits: String, SD: String) extends CommandLineFunction {
   @Argument(doc = "the bam file name") var bamFile = bamName
   @Input(doc = "the bam to sample file") var bamToSampleFile = bamToSample
   @Output(doc = "the output file") var outputFile = outputFl
   @Input(doc = "the signal file") var signalFile = signalFl
   @Input(doc = "library directory") var libDir = libraryDir
+  @Argument(doc = "alpha value for the segmentation") var mAlpha = alpha
+  @Argument(doc = "split segment rejoining approach") var mSplits = splits
+  @Argument(doc = "the SD cutoff to use") var mSD = SD
+
   memoryLimit = Some(4)
 
-  def commandLine = "Rscript %s/R/individual_segmentation.R --bam.file.name %s --bam.to.sample.file %s --output.filename %s --signal.file %s --r.dir %s".format(libDir.getAbsolutePath(), bamFile, bamToSampleFile.getAbsolutePath(), outputFile.getAbsolutePath(), signalFile.getAbsolutePath(),libDir.getAbsolutePath())
+  def commandLine = "Rscript %s/R/individual_segmentation.R --bam.file.name %s --bam.to.sample.file %s --output.filename %s --signal.file %s --r.dir %s --alpha %s --undo.splits %s --undo.SD %s".format(libDir.getAbsolutePath(), bamFile, bamToSampleFile.getAbsolutePath(), outputFile.getAbsolutePath(), signalFile.getAbsolutePath(),libDir.getAbsolutePath(), mAlpha, mSplits, mSD)
 }
 
 
