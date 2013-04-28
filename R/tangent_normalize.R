@@ -138,7 +138,7 @@ tumor.data = sweep(tumor.data,2,apply(tumor.data,2,mean),"/")
 
 # get the sex assignments; a list of each sex with their associated columns
 sex.columns = process.sex.assignments(sex.calls,colnames(tumor.data))
-
+print(summary(sex.columns))
 # order both our tumors and normals; females then males
 tumor.data <- cbind(tumor.data[!sex.columns],tumor.data[sex.columns])
 normal.data <- cbind(normal.data[!sex.columns],normal.data[sex.columns])
@@ -156,6 +156,7 @@ processed.data = list()
 # now normalize coverage across each of the split data (split by sex/autosomal data)
 for (n in c("autosome",sex.chromosomes)) {
     print(paste("Starting analysis for chromosome",n))
+
     log.tumor = mean.center.log.transform(tumor.split[[n]])
     log.normal = mean.center.log.transform(normal.split[[n]])
 

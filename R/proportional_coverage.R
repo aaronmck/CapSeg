@@ -3,6 +3,11 @@
 # Aaron
 #
 # Jan 3rd, 2011
+# run the individual segmentation
+# ---------------------------------------------------------------------------
+# Aaron
+#
+# Jan 3rd, 2011
 #
 # This script processes raw data from the exome coverage tool and produces
 # segmentation calls and other data needed for the HapSeg Algorithm for

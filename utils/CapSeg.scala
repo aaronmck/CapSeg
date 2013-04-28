@@ -108,7 +108,7 @@ class CapSeg extends QScript {
   // The main script
   // ----------------------------------------------------------------------------------------------------------------
   def script = {
-    // Firehose - we have to take in string boolean parameters and convert to the Boolean type inside of this script
+    // Due to Firehose parameters we have to take in string represented boolean parameters and convert to the Boolean type inside of this script
     var useHistData = false
     if (useHistoricalData != null && useHistoricalData.toUpperCase().equals("TRUE"))
       useHistData = true
@@ -193,6 +193,10 @@ class CapSeg extends QScript {
     var srcDir = new File(libraryDir.getAbsolutePath() + "/R/allelic/")
     var outAllelicDir = new File(outputDir + "/allelicCapSeg/")
     var alleleOutput = List[File]()
+
+    // for each of the tumor samples, create segments, and for those samples with associated normal tissue,
+    // run allelic CapSeg
+    var normalMap = sampleObj.getNormalMap
     for ((sample, tumor) <- sampleObj.getTumorMap) {
       val signalFile = new File(outputDir.getAbsolutePath() + "/signal/" + sample + ".tsv")
       val segmentFile = new File(outputDir.getAbsolutePath() + "/segments/" + sample + ".seg.txt")
@@ -200,8 +204,6 @@ class CapSeg extends QScript {
       val output = alleleFreq + "/" + sample + ".acov"
       alleleOutput ::= output
       // now figure out what the normal BED file is called
-      val bedfile = alleleFreq + "/" + sample + ".bed"
-      alleleBalance(tumor, bedfile, dbsnp, output, depFile, reference)
 
       add(new SegmentSample(libraryDir,
                             new File(tumor).getName,
@@ -211,7 +213,14 @@ class CapSeg extends QScript {
                             segmentAlpha,
                             segmentSplits,
                             segmentSD))
-      add(new AllelicCapSeg(signalFile, outAllelicDir, segmentFile, output, tumor, srcDir, libraryDir, tumorBamToSampleFile))
+
+      // if we have a normal sample, pull down the
+      val bedfile = alleleFreq + "/" + sample + ".bed"
+      alleleBalance(tumor, bedfile, dbsnp, output, depFile, reference)
+
+      // now check to ensure that this tumor has a normal sample associated with it
+      if (sampleObj.checkBothTumorNormal(sample))
+        add(new AllelicCapSeg(signalFile, outAllelicDir, segmentFile, output, tumor, srcDir, libraryDir, tumorBamToSampleFile))
 
       signal ::= signalFile
       sampleToSignal.write(sample + "\t" + signalFile.getAbsolutePath + "\n")
@@ -439,7 +448,6 @@ class AllelicCapSeg(probeFL: File, outputDir: File, segmentFile: File, covFile: 
   def commandLine = "Rscript %s/R/allelic_capseg.R --output.dir %s --probe.file %s --segment.file %s --coverage.file %s --bam.name %s --source.directory %s --bam.to.sample %s".format(loc.getAbsolutePath(),out.getAbsolutePath(),probe.getAbsolutePath(),seg.getAbsolutePath(),cov.getAbsolutePath(),bam,code.getAbsolutePath(),bamToSample.getAbsolutePath());
 }
 
-
 // ------------------------------------------------------------------
 // -------------------- utility classes -----------------------------
 // ------------------------------------------------------------------
@@ -539,6 +547,16 @@ class TumorNormalFile(inputFile: String) extends ReadDelimitedFile(inputFile, "\
     printToFile(new File(filename))(p => {
       getNormals().foreach(p.println)
     })
+  }
+
+  def checkBothTumorNormal(tumorSample: String): Boolean = {
+    // check that we have the sample.  If we do, check that we have
+    // both a tumor and a normal bam file. If so return true, otherwise
+    // false
+    if ((getTumorMap() contains tumorSample) && (getNormalMap() contains tumorSample)) {
+      return true
+    }
+    return false
   }
 }
 
