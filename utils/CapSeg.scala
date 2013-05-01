@@ -1,6 +1,5 @@
 import scala.util._
 import org.broadinstitute.sting.commandline.ArgumentSource
-import org.broadinstitute.sting.gatk.DownsampleType
 import org.broadinstitute.sting.queue.extensions.samtools._
 import org.broadinstitute.sting.queue.function.scattergather.{GatherFunction, CloneFunction, ScatterFunction}
 import org.broadinstitute.sting.queue.extensions.gatk._
@@ -254,7 +253,7 @@ class CapSeg extends QScript {
 
   // sample to lane walker
   def sampleToLane(bamsIn: File, sampleToLane: File, bamFileToSample: File, sampleInterval: File) = {
-    val sampleTL = new SampleToLane
+    val sampleTL = new SampleToLaneWalker
     sampleTL.input_file :+= bamsIn
     sampleTL.strf = sampleToLane
     sampleTL.bs = bamFileToSample
@@ -266,7 +265,7 @@ class CapSeg extends QScript {
 
   // get allelic information at the target het sites in a sample
   def alleleBalance(bam: File, bed: File, dbSNP: File, output: File, dep: File, ref: File) = {
-    val aBal = new AlleleCount
+    val aBal = new AlleleCountWalker
     aBal.input_file :+= bam
     aBal.DbSNP = dbSNP
     aBal.calls = bed
@@ -315,7 +314,7 @@ class CapSeg extends QScript {
 
   // sample to lane walker
   def baitDepth(bamsIn: File, bed: File, outputFile: File, perSample: Boolean) = {
-    val bait = new BaitDepth with CommandLineGATKArgs
+    val bait = new BaitDepthWalker with CommandLineGATKArgs
     bait.input_file :+= bamsIn
     bait.bed = bed
     bait.perSample = perSample

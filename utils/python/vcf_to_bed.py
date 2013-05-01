@@ -28,7 +28,7 @@ parser.add_argument('-out', '--outputdir', help="where to put the output files",
 parser.add_argument('-sc','--sex_chromosome', help="what sex chromosome should we put hets from", required=False, default="X")
 
 # where to dump the output: we use the sample name plus .bed
-parser.add_argument('-hc','--het_ratio', help="below this threshold we call the sample a male", required=False, default=0.005, type=float)
+parser.add_argument('-hc','--het_ratio', help="below this threshold we call the sample a male", required=False, default=0.05, type=float)
 
 # where to dump the output: we use the sample name plus .bed
 parser.add_argument('-sf','--sex_file', help="what file should we write the sex file to", required=True)
