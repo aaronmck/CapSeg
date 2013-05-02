@@ -27,7 +27,6 @@ output.and.plot.data <- function(tumor.matrix,tumors.cr,baits,output.location,si
 	print(sgn.files)
 	print(summary(tumor.matrix))
 	for (name in colnames(tumor.matrix)) {
-                print(name)
 		if (sum(is.na(tumor.matrix[,name])) > 0) {
 			print(paste("Skipping sample",name))
 			next()
@@ -73,15 +72,9 @@ output.and.plot.data <- function(tumor.matrix,tumors.cr,baits,output.location,si
 #' @param baits the bait information
 #' @param cache.location where to store the data
 #' @param analysis.set.name the analysis set name
-save.off.processed.data <- function(log.normals,log.tumors,calibrated.tumors,baits,cache.location,analysis.set.name,build.version,chromosome) {
-	save.data <- list(log.normals=log.normals,
-                          log.tumors=log.tumors,
-                          calibrated.tumors=calibrated.tumors,
-                          baits=baits,analysis.set.name=analysis.set.name,
-                          version="6",
-                          build.version=build.version,
-                          chromosome=chromosome)
-	output.file = paste(cache.location,"/",analysis.set.name,".v6.rData",sep="")
+save.off.processed.data <- function(log.normals,log.tumors,calibrated.tumors,baits,cache.location,analysis.set.name,build.version) {
+	save.data <- list(log.normals=log.normals,log.tumors=log.tumors,calibrated.tumors=calibrated.tumors,baits=baits,analysis.set.name=analysis.set.name,version="5",build.version=build.version)
+	output.file = paste(cache.location,"/",analysis.set.name,".v4.rData",sep="")
 	save(save.data,file=output.file)
 }
 

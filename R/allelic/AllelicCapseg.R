@@ -13,6 +13,7 @@ AllelicCapseg = function( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, 
    tmp.name <- read.delim(capseg.seg.fn, stringsAsFactors=FALSE, check.names=FALSE)$Sample[1]
    seg.dat <- as.data.frame(ReadGladMat(capseg.seg.fn, sample.name=tmp.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, type="capseg", verbose=verbose)[[1]], stringsAsFactors=FALSE)
 
+   print(paste("Checking for existance of ",result_FN))
    if( !file.exists(result_FN))
    {
 ## Extract capture data: build list structures with germline het calls and capseg probe intensities according to the seg.dat created above and input here.

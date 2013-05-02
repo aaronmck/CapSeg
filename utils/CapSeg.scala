@@ -62,9 +62,6 @@ class CapSeg extends QScript {
   var dbsnp: File = _
 
   // ---------------------------------- optional arguments ----------------------------------
-  @Argument(doc = "intervals per split", shortName = "iPerSplit", required = false)
-  var splitSize = 150
-
   @Argument(doc = "what long queue to submit jobs to", required = false)
   var longQueue = "week"
 
@@ -99,8 +96,7 @@ class CapSeg extends QScript {
   // the command line traits -- defaults for our pipeline
   trait CommandLineGATKArgs extends CommandLineGATK {
     this.reference_sequence = reference
-    this.intervals = List(qscript.intervals)
-    this.memoryLimit = 4
+    this.memoryLimit = 6
   }
 
   // ----------------------------------------------------------------------------------------------------------------
@@ -319,8 +315,7 @@ class CapSeg extends QScript {
     bait.bed = bed
     bait.perSample = perSample
     bait.out = outputFile
-    bait.isr = IntervalSetRule.INTERSECTION
-     bait.intervals :+= bed
+    bait.intervals :+= bed
     add(bait)
   }
 }
