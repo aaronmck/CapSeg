@@ -10,7 +10,37 @@
 
 
 
-HscrSegFit <- function(h.d, h.snp.gt.p, h.snp.annot, theta,
+HscrSegFit <- function(h.seg.dat, theta, eps=1e-5, out.p=1e-3, min.iter=1, max.iter=10, force.diploid=FALSE, verbose=FALSE) {
+   
+   if (force.diploid) {
+      min.iter = 1
+   }
+   
+   if (verbose) {
+      print(paste("OUT_P is", out.p))
+   }
+   theta <- AffyInitTheta(h.seg.dat=h.seg.dat, verbose)
+   smms = LoadCached({
+            smms <- SegMeansMSteps(h.seg.dat, out.p, theta, eps, force.diploid, min.iter, max.iter, verbose=verbose)
+            saveRDS (smms, file = file.path(RESULTS.DIR, "smms.res.rds"))
+            smms }, overwrite=TRUE, res.fn = file.path(RESULTS.DIR, "smms.res.rds"), mod.name="SegMeansMStepsArray")
+   
+   theta <- smms[["theta"]]
+   h.snp.clust.p <- smms[["h.snp.clust.p"]]
+   delta.tau <- smms[["delta.tau"]]
+   
+   delta.tau.sd <- BuildDeltaTauSd(h.seg.dat, delta.tau, out.p, theta, verbose=verbose)
+   seg.log.ev <- BuildSegLogEv(h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
+   seg.expected.phase <- BuildSegExpectedPhase(length(h.seg.dat[["h.snp.d"]]), h.snp.clust.p)
+   
+   return(list(snp.clust.p=h.snp.clust.p, h.snp.gt.p=h.seg.dat[["h.snp.gt.p"]],
+               delta.tau=delta.tau,
+               delta.tau.sd=delta.tau.sd, sigma.h=smms[["sigma.h"]], loglik=smms[["loglik"]],
+               seg.log.ev=seg.log.ev, seg.expected.phase=seg.expected.phase,
+               theta=theta))
+}
+
+HscrSegFitDEP <- function(h.d, h.snp.gt.p, h.snp.annot, theta,
                        seg.info, eps=1e-5, out.p=1e-3, 
                        min.iter=1, max.iter=10,
                        force.diploid=FALSE, verbose=FALSE) {
@@ -38,39 +68,48 @@ HscrSegFit <- function(h.d, h.snp.gt.p, h.snp.annot, theta,
   ## returned. Trace through all calls to this function and fix things such
   ## that they're not relying on this list's version and then remove from return
   return(list(snp.clust.p=h.snp.clust.p, h.snp.gt.p=h.snp.gt.p,
-              e.mu=Atten(h.e.mu, theta[["at"]]),
+              e.mu=AffyAtten(h.e.mu, theta[["at"]]),
               mu.post.sd=h.mu.sd, sigma.h=smms[["sigma.h"]], loglik=smms[["loglik"]],
               seg.log.ev=seg.log.ev, seg.expected.phase=seg.expected.phase,
               theta=theta))
 }
 
 BuildSegExpectedPhase <- function(n.segs, h.snp.clust.p) {
-  seg.expected.phase <- matrix(NA, nrow=n.segs, ncol=2)
-  ## FIXME: foreach, combine via rbind
-  for (i in seq(n.segs)) {
+  
+  seg.expected.phase <- foreach (i = seq(n.segs), .combine=rbind) %dopar% {
+    # i <- 1
     snp.clust.p <- h.snp.clust.p[[i]]
-    state.mat <- matrix(c(0, 1, 2, 3), ncol=4, nrow=nrow(snp.clust.p),
-                        byrow=TRUE)
+    state.mat <- matrix(c(0, 1, 2, 3), ncol=4, nrow=nrow(snp.clust.p), byrow=TRUE)
     snp.e.state <- rowSums(state.mat * snp.clust.p[, c(3, 2, 4, 1)])    
     ## now take expectation of phase over segment, weight by P(het)
-    seg.expected.phase[i, 1] <- (sum(snp.clust.p[, 4] * snp.e.state) /
-      sum(as.vector(snp.clust.p[, 4]))) 
-    seg.expected.phase[i, 2] <- (sum(snp.clust.p[, 2] * snp.e.state) /
-      sum(as.vector(snp.clust.p[, 2])))
+    c( 
+      sum(snp.clust.p[, 4] * snp.e.state) / sum(as.vector(snp.clust.p[, 4])), 
+      sum(snp.clust.p[, 2] * snp.e.state) / sum(as.vector(snp.clust.p[, 2])) 
+    )
   } 
-
+  rownames(seg.expected.phase) <- NULL
   seg.expected.phase
 }
 
 
-BuildSegLogEv <- function(h.d, h.snp.gt.p, theta, out.p, h.e.mu, verbose=verbose) {
-  foreach(i = seq(length(h.d)), .combine=c) %dopar% {
-    GetSegLogEv(h.d[[i]], h.snp.gt.p[[i]], theta, out.p, e.mu=h.e.mu[i, ])[1]
+BuildSegLogEv <- function(h.seg.dat, theta, out.p, delta.tau, verbose=verbose) {
+  foreach(i = seq(length(h.seg.dat[["h.snp.d"]])), .combine=c) %dopar% {
+    GetSegLogEv(i, h.seg.dat, theta, out.p, delta.tau=delta.tau[i,], verbose=verbose)[1]
   }
 }
 
+BuildDeltaTauSd <- function(h.seg.dat, delta.tau, out.p, theta, verbose=verbose) {
+   h.mu.sd <- foreach(i = seq(length(h.seg.dat[["h.snp.d"]])), .combine=rbind) %dopar% {
+      SegPostSdExtreme(h.seg.dat[["h.snp.d"]][[i]], h.seg.dat[["h.cn.d"]][[i]], delta.tau[i, ], out.p, h.seg.dat[["h.snp.gt.p"]][[i]], theta)
+      
+   }
+   colnames(h.mu.sd) <- c("delta", "tau")
+   rownames(h.mu.sd) <- NULL
+   h.mu.sd
+}
 
-BuildHMuSd <- function(h.d, h.e.mu, out.p, h.snp.gt.p, theta, verbose=verbose) {
+
+BuildHMuSdDEP <- function(h.d, h.e.mu, out.p, h.snp.gt.p, theta, verbose=verbose) {
   h.mu.sd <- foreach(i = seq(length(h.d)), .combine=rbind) %dopar% {
     SegPostSd(h.d[[i]], h.e.mu[i, ], out.p, h.snp.gt.p[[i]], theta)
   }
@@ -79,8 +118,61 @@ BuildHMuSd <- function(h.d, h.e.mu, out.p, h.snp.gt.p, theta, verbose=verbose) {
   h.mu.sd
 }
 
+SegMeansMSteps <- function(h.seg.dat, out.p, theta, eps, force.diploid, min.iter, max.iter, verbose=FALSE) {
 
-SegMeansMSteps <- function(h.d, out.p, h.snp.gt.p, theta, eps, force.diploid, min.iter, max.iter, verbose=FALSE) {
+   # h.seg.dat <- iams.res[["as.res"]][["h.seg.dat"]]
+   # theta <- iams.res[["em.fit"]][["theta"]]
+   # eps <- iams.res[["use.eps"]]
+   # min.iter <- 1
+   # max.iter <- 10
+
+   n.segs <- length(h.seg.dat[[1]])
+   if (verbose) {
+      print(paste("h.d size =", n.segs))
+   }
+   h.ngt.t <- array(NA, dim=c(n.segs, 5))
+   delta.tau <- InitDeltaAndTau(h.seg.dat, theta, seg.info, force.diploid)
+   
+   loglik <- -Inf  
+   iter <- 1
+   
+   while (TRUE) {
+      ##  M-steps for seg-means
+      delta.tau <- OptimizeDeltaTauArray(delta.tau, h.seg.dat, out.p, theta, force.diploid, verbose=verbose)
+      
+      h.snp.clust.p <- ClustProbsESteps(h.seg.dat[["h.snp.d"]], delta.tau, h.seg.dat[["h.snp.gt.p"]], out.p, theta)
+      for (i in seq(n.segs)) {
+         h.ngt.t[i, ] <- colSums(h.snp.clust.p[[i]])
+      }
+      
+      p.het <- CalculatePHet(h.ngt.t)
+      
+      theta <- HscrSegFitThetaOpt(iter, min.iter, p.het, h.seg.dat, delta.tau, out.p, theta, verbose=verbose)
+      
+      cur.loglik <- GetCurLogLik(h.seg.dat, delta.tau, out.p, theta)
+      
+      cond <- abs(cur.loglik - loglik) / abs(cur.loglik) 
+      loglik <- cur.loglik
+      sigma.h <- GetSigmaH(theta[["sigma.epsilon"]], theta[["sigma.eta"]])
+      
+      if (verbose) {
+         print(round(cur.loglik, 4))
+         PrintTheta(theta, cond)
+      }
+      
+      
+      if ((iter > min.iter) && ((cond < eps) || (iter >= max.iter))) {
+         break
+      }
+      
+      iter <- iter + 1
+   }
+   
+   return(list(loglik=cur.loglik, theta=theta, delta.tau=delta.tau, sigma.h=sigma.h, h.snp.clust.p=h.snp.clust.p))
+}
+
+
+SegMeansMStepsDEP <- function(h.d, out.p, h.snp.gt.p, theta, eps, force.diploid, min.iter, max.iter, verbose=FALSE) {
 
   n.segs <- length(h.d)
   if (verbose) {
@@ -159,17 +251,18 @@ CalculatePHet <- function(h.ngt.t) {
 }
 
 InitDeltaAndTau <- function(h.seg.dat, theta, seg.info, force.diploid) {
+   
    ## just return delta and tau
    
-   n.segs <- length(h.seg.dat[[1]])
+    n.segs <- length(h.seg.dat[[1]])
    if (force.diploid) {
       h.e.mu <- array(NA, dim=c(n.segs, 3))
       for (i in seq(n.segs)) {
-         h.e.mu[i, ] <- c(1, 1, 2)
+         h.e.mu[i, ] <- c(1, 2)
       }
    } else {
       init <- function(x) {
-         d <- foreach(i=c("h.snp.d", "h.cn.d", "h.capseg.d"), .combine=c) %do% {colSums(h.seg.dat[[i]][[x]])}
+         d <- foreach(i=c("h.snp.d", "h.cn.d"), .combine=c) %do% {colSums(h.seg.dat[[i]][[x]])}
          out = median(d)
          out = ifelse(is.na(out), 2, out)
          return(median(out))   
@@ -189,50 +282,6 @@ InitDeltaAndTau <- function(h.seg.dat, theta, seg.info, force.diploid) {
 }
 
 
-InitHEMuArray <- function(h.seg.dat, theta, seg.info, force.diploid) {
-   
-   n.segs <- length(h.seg.dat[["h.snp.d"]])
-   if (force.diploid) {
-      h.e.mu <- array(NA, dim=c(n.segs, 3))
-      for (i in seq(n.segs)) {
-         h.e.mu[i, ] <- c(1, 1, 2)
-      }
-   } else {
-      cn.snp.init = function(x) {  
-         d = c(unlist(colSums(h.seg.dat[["h.snp.d"]][[x]])), unlist(h.seg.dat[["h.cn.d"]][[x]]))
-         out = median(d)
-         out = ifelse(is.na(out), 2, out)
-         return(out)
-      }
-      snp.init = function(x) {  
-         d = unlist(colSums(h.seg.dat[["h.snp.d"]][[x]]))
-         out = median(d)
-         out = ifelse(is.na(out), 2, out)
-         return(out)
-      }
-      cn.init = function(x) {  
-         d = unlist(h.seg.dat[["h.cn.d"]][[x]])
-         out = median(d)
-         out = ifelse(is.na(out), 2, out)
-         return(median(out))
-      }
-      if (all(c("cn", "snp") %in% PROBE.TYPES)) {
-         h.mu.t <- unlist(lapply(1:n.segs, cn.snp.init))
-      } else if ("cn" %in% PROBE.TYPES) {
-         h.mu.t <- unlist(lapply(1:n.segs, cn.init))
-      } else if ("snp" %in% PROBE.TYPES) {
-         h.mu.t <- unlist(lapply(1:n.segs, snp.init))
-      } else {
-         stop ("cn or snp wasn't found in PROBE.TYPES")
-      }
-      h.mu.t[h.mu.t < 0] <- 0
-      i.mu.t <- h.mu.t
-      half <- i.mu.t / 2
-      quart <- i.mu.t / 4
-      h.e.mu <- cbind(quart, i.mu.t - quart, i.mu.t)
-   }
-   return(h.e.mu)
-}
 
 
 InitHEMu <- function(h.d, seg.info, force.diploid) {
@@ -255,18 +304,25 @@ InitHEMu <- function(h.d, seg.info, force.diploid) {
 }
 
 OptimizeDeltaTauArray <- function(delta.tau, h.seg.dat, out.p, theta, force.diploid, verbose=verbose) {
+
    # browser()
    if (verbose) print("Optimizing Array Delta and Tau")
    n.segs <- length(h.seg.dat[[1]])
    if (force.diploid) {
       delta.tau <- matrix(c(1, 2) + theta[["alpha"]], nrow=n.segs, ncol=2, byrow=TRUE)
    } else {
-      delta.tau <- foreach(i = seq(n.segs), .combine=rbind) %dopar% {
-         i = 1
-         res <- PlatformSpecificOptimizationExtreme(i, delta.tau, h.seg.dat, out.p, theta, verbose=verbose)
+      # delta.tau <- foreach(i = seq(n.segs), .combine=rbind) %dopar% {
+      #    res <- AffyPlatformSpecificOptimization(i, delta.tau, h.seg.dat, out.p, theta, verbose=verbose)
+      #    if (verbose) cat("$")
+      #    res
+      # }
+
+      delta.tau <- do.call('rbind', lapply(seq(n.segs), function(i) {
+         res <- AffyPlatformSpecificOptimization(i, delta.tau, h.seg.dat, out.p, theta, verbose=verbose)
          if (verbose) cat("$")
          res
-      }
+      }))
+
       rownames(delta.tau) <- NULL
       if (verbose) cat("\n")
    }
@@ -275,6 +331,7 @@ OptimizeDeltaTauArray <- function(delta.tau, h.seg.dat, out.p, theta, force.dipl
 
 
 OptimizeHEMuArray <- function(h.e.mu, h.seg.dat, out.p, theta, force.diploid, verbose=verbose) {
+
    if (verbose) print("\n Optimizing Array HEMu")
    n.segs <- length(h.seg.dat[["h.snp.d"]])
    if (force.diploid) {
@@ -323,8 +380,21 @@ OptimizeHEMu <- function(h.e.mu, h.d, out.p, h.snp.gt.p, theta, force.diploid, v
   return(h.e.mu)
 }
 
-   
-HscrSegFitThetaOpt <- function(iter, min.iter, p.het, h.d, h.snp.gt.p,
+HscrSegFitThetaOpt <- function(iter, min.iter, p.het, h.seg.dat, delta.tau, out.p, theta, verbose=verbose) {
+  ## wait for some small number of iterations to estimate variances;
+  ## inits are usually close to correct.
+  if (iter >= min.iter) {
+    if (verbose) {
+      print(paste(round(100 * p.het, 2), "% het", sep=""))
+    }
+    theta <- AffyThetaOpt(h.seg.dat, delta.tau, out.p, theta, verbose=verbose)
+  }
+  
+  return(theta)
+}
+
+
+HscrSegFitThetaOptDEP <- function(iter, min.iter, p.het, h.d, h.snp.gt.p,
                                h.e.mu, h.snp.clust.p, out.p, theta,
                                verbose=verbose) {
   ## wait for some small number of iterations to estimate variances;
@@ -338,13 +408,26 @@ HscrSegFitThetaOpt <- function(iter, min.iter, p.het, h.d, h.snp.gt.p,
   }
 
   return(theta)
+
 }
 
 
-GetCurLogLik <- function(h.d, h.e.mu, out.p, h.snp.gt.p, theta) {
+GetCurLogLik <- function(h.seg.dat, delta.tau, out.p, theta) {
+  n.segs <- length(h.seg.dat[["h.snp.d"]])
+  
+  seg.loglik <- foreach(i = seq(n.segs), .combine=rbind) %dopar% {
+    c(sum(AffyCalcSnpLogLik(h.seg.dat[["h.snp.d"]][[i]], delta.tau[i, ], out.p, h.seg.dat[["h.snp.gt.p"]][[i]], theta)),
+        sum(AffyCalcCnLogLik(h.seg.dat[["h.cn.d"]][[i]], delta.tau[i, ], out.p, theta) ))
+  }  
+  seg.loglik <- seg.loglik[complete.cases(seg.loglik)]
+  
+  return(sum(seg.loglik))
+}
+
+GetCurLogLikDEP <- function(h.d, h.e.mu, out.p, h.snp.gt.p, theta) {
   n.segs <- length(h.d)
   seg.loglik <- foreach(i = seq(n.segs), .combine=c) %dopar% {
-    sum(CalcSnpLogLik(h.d[[i]], h.e.mu[i, ], out.p, h.snp.gt.p[[i]],
+    sum(AffyCalcSnpLogLik(h.d[[i]], h.e.mu[i, ], out.p, h.snp.gt.p[[i]],
                   theta))
   }
 
@@ -352,6 +435,7 @@ GetCurLogLik <- function(h.d, h.e.mu, out.p, h.snp.gt.p, theta) {
 }
 
 PrintTheta <- function(theta, cond, sigma.h=TRUE) {
+
    one = paste(sapply(names(theta), function(x) paste(x, "=", round(theta[[x]], 4), sep="")), collapse=", ")
    
    if (sigma.h) {

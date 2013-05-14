@@ -56,7 +56,7 @@ JoinSmallSegs <- function(res, min.probes, verbose=FALSE) {
 	}
 
 	while (length(ix) > 0) {
-		# browser()
+		
 		ix <- ix[1]
 		if (verbose) {
 			cat(paste(ix, ":", sep=""))
@@ -69,7 +69,7 @@ JoinSmallSegs <- function(res, min.probes, verbose=FALSE) {
 			merge.res <- IterateMergeSegs(n.seg - 1, n.seg)
 			seg.dat <- MergeSegTab(n.seg - 1, n.seg, seg.dat)
 		} else {
-			idxs = GetMergeableSegIndicesExtreme(seg.chrs, ix, h.seg.dat[d.types])
+			idxs = GetMergeableSegIndicesExtreme(seg.chrs, ix, verbose=verbose, h.seg.dat[d.types])
 			merge.res <- IterateMergeSegs(idxs[1], idxs[2])
 			seg.dat = MergeSegTab(idxs[1], idxs[2], seg.dat)
 		}
@@ -127,21 +127,21 @@ MergeSegTab = function(ix.1, ix.2, seg.tab) {
 	unmergeable.cols = setdiff(names(seg.tab), a.cols)
 	if (length(unmergeable.cols) > 0 ) warning(paste("Dropping columns: ", paste(unmergeable.cols, collapse=", ")))
 	if (ix.2 - ix.1 != 1) stop (paste("Cant merge non-adjacent segs: ", ix.1, ix.2))
-	if (seg.tab$Chromosome[ix.1] != seg.tab$Chromosome[ix.2]) stop (paste("Cant merge segs on different chromosomes: ", seg.tab$Chromosome[ix.1], seg.tab$Chromosome[ix.2]))
+	if (seg.tab[ix.1, "Chromosome"] != seg.tab[ix.2, "Chromosome"]) stop (paste("Cant merge segs on different chromosomes: ", seg.tab[ix.1, "Chromosome"], seg.tab[ix.2, "Chromosome"]))
 	
 	if (nrow(seg.tab) == 2) {
-		out = data.frame(Chromosome = seg.tab$Chromosome[ix.1], Start.bp = seg.tab$Start.bp[ix.1], End.bp = seg.tab$End.bp[ix.2])
+		out = data.frame(Chromosome = seg.tab[ix.1, "Chromosome"], Start.bp = seg.tab[ix.1, "Start.bp"], End.bp = seg.tab[ix.2, "End.bp"])
 	} else if (ix.1 == 1) { 
-		mrg = data.frame(Chromosome = seg.tab$Chromosome[ix.1], Start.bp = seg.tab$Start.bp[ix.1], End.bp = seg.tab$End.bp[ix.2])
+		mrg = data.frame(Chromosome = seg.tab[ix.1, "Chromosome"], Start.bp = seg.tab[ix.1, "Start.bp"], End.bp = seg.tab[ix.2, "End.bp"])
 		base = seg.tab[(ix.2 + 1):nrow(seg.tab), a.cols]
 		out = rbind(mrg, base)
 	} else if (ix.2 == nrow(seg.tab)) {
 		head = seg.tab[1:( ix.1 - 1), a.cols]
-		mrg = data.frame(Chromosome = seg.tab$Chromosome[ix.1], Start.bp = seg.tab$Start.bp[ix.1], End.bp = seg.tab$End.bp[ix.2])
+		mrg = data.frame(Chromosome = seg.tab[ix.1, "Chromosome"], Start.bp = seg.tab[ix.1, "Start.bp"], End.bp = seg.tab[ix.2, "End.bp"])
 		out = rbind(head, mrg)
 	} else {
 		head = seg.tab[1:( ix.1 - 1), a.cols]
-		mrg = data.frame(Chromosome = seg.tab$Chromosome[ix.1], Start.bp = seg.tab$Start.bp[ix.1], End.bp = seg.tab$End.bp[ix.2])
+		mrg = data.frame(Chromosome = seg.tab[ix.1, "Chromosome"], Start.bp = seg.tab[ix.1, "Start.bp"], End.bp = seg.tab[ix.2, "End.bp"])
 		base = seg.tab[(ix.2 + 1):nrow(seg.tab), a.cols]
 		out = rbind(head, mrg, base)
 	}
@@ -149,7 +149,7 @@ MergeSegTab = function(ix.1, ix.2, seg.tab) {
 }
 
 
-GetMergeableSegIndicesExtreme = function(seg.chrs, ix, ...) {
+GetMergeableSegIndicesExtreme = function(seg.chrs, ix, verbose, ...) {
 
 	dat = list(...)[[1]]
 	# dat = list(h.seg.dat[d.types])[[1]]
@@ -339,12 +339,15 @@ MergeTwoSegsExtreme <- function(ix.1, ix.2, h.d, h.probe.annot, ...) {
 	return(out)
 }
 
+JoinCloseSegs <- function(h.seg.dat, snp.clust.p, theta, force.diploid, out.p, merge.thresh=0.5, verbose=FALSE) {
 
-JoinCloseSegs <- function(h.seg.dat, theta, force.diploid, out.p, merge.thresh=0.5, verbose=FALSE) {
+	# h.seg.dat <- tmp.res[["as.res"]][["h.seg.dat"]]
+	# theta <- tmp.res[["array.em.fit"]][["theta"]]
+	# force.diploid <- FALSE
+	# out.p <- .05
+	# merge.thresh <- seg.merge.thresh
+	# verbose=TRUE
 	
-	h.seg.dat <- iams.res[["as.res"]][["h.seg.dat"]]
-	theta <- iams.res[["array.em.fit"]][["theta"]]
-
 	if (verbose) {
 		print("Merging close segments...")
 	}
@@ -355,29 +358,25 @@ JoinCloseSegs <- function(h.seg.dat, theta, force.diploid, out.p, merge.thresh=0
 	merged.loci <- data.frame()
 	
 	seg.chrs <- sapply(h.seg.dat[["h.snp.annot"]], "[[", "chr")
-	# seg.n.snps <- sapply(h.d[["snp"]], ncol)
 	d.types <- c("h.snp.d", "h.cn.d")
 	seg.n.probes <- foreach(dt=d.types, .combine=cbind) %do% sapply(h.seg.dat[[dt]], ncol)
 	colnames(seg.n.probes) <- gsub("(^h\\.)|(\\.d$)", "", d.types)
 	
-	WhileFunc <- function() {
-		while (TRUE) {
+	while (TRUE) {
 
 		na.ix <- which(is.na(merge.prob[, "merge.prob"]))
 		delta.chr.ix <- (diff(seg.chrs) != 0)
 		
-		# for (i in 1:length(na.ix)) {
-		for (i in 244:246) {
-			# i <- 245
+		for (i in 1:length(na.ix)) {
+			# i <- 26
 
 			## never merge across different chrs
 			if (delta.chr.ix[na.ix[i]] == FALSE) {
 				# res <- CalcSegMergeProb(na.ix[i], na.ix[i] + 1, h.snp.d, h.snp.gt.p, theta, force.diploid, out.p, verbose=verbose)
 				# res <- CalcSegMergeProbExtreme(na.ix[i], na.ix[i] + 1, h.d, h.snp.gt.p, theta, force.diploid, out.p, verbose=verbose)
-				res <- CalcSegMergeProbExtreme(na.ix[i], na.ix[i] + 1, h.seg.dat, theta, force.diploid, out.p, verbose=verbose)
+				res <- CalcSegMergeProb(na.ix[i], na.ix[i] + 1, h.seg.dat, theta, force.diploid, out.p, verbose=verbose)
 				if (is.finite(res[1, "merge.prob"]) == FALSE) {
-					merge.prob[na.ix[i], ] <- c(-1, NaN, res[,"h0.log.ev.cn"], res[, "h0.log.ev.snp"], res[, "h1.log.ev.cn"], 
-							res[, "h1.log.ev.snp"], res[, "merge.prob.cn"], res[, "merge.prob.snp"])
+					merge.prob[na.ix[i], ] <- c(-1, NaN, res[,"h0.log.ev.cn"], res[, "h0.log.ev.snp"], res[, "h1.log.ev.cn"], res[, "h1.log.ev.snp"], res[, "merge.prob.cn"], res[, "merge.prob.snp"])
 					if (verbose) {
 						print(paste( "CalcSegMergeProb error: ", na.ix[i], sep="" ))
 					}
@@ -400,7 +399,6 @@ JoinCloseSegs <- function(h.seg.dat, theta, force.diploid, out.p, merge.thresh=0
 		}
 		
 		m.ix <- which.max(merge.prob[, "merge.prob"]) 
-		
 		if (verbose) {
 			cat(paste("merging #", m.ix, ", prob= ", round(merge.prob[m.ix, 1], 4), ", log10 prob= ", round(merge.prob[m.ix, 2], 4),  
 							",  h0.log.ev.cn= ", round(merge.prob[m.ix, 3], 4), ",  h0.log.ev.snp= ", round(merge.prob[m.ix, 4], 4),
@@ -416,19 +414,29 @@ JoinCloseSegs <- function(h.seg.dat, theta, force.diploid, out.p, merge.thresh=0
 		pos <- max(snp.pos, cn.pos)
 		merged.loci <- rbind(merged.loci, c(chr, pos, merge.prob[m.ix, ]) )
 
-		merge.snp.res <- MergeTwoSegsExtreme(m.ix, m.ix + 1, h.seg.dat[["h.snp.d"]], h.seg.dat[["h.snp.annot"]], h.seg.dat[["h.snp.gt.p"]])
-		# h.d[["snp"]] <- merge.snp.res[["h.d"]]
+		h.snp.gt.p <- h.seg.dat[["h.snp.gt.p"]] # we need to do this because MergeTwoSegsExtreme names the output according to the variable name input
+		merge.snp.res <- MergeTwoSegsExtreme(m.ix, m.ix + 1, h.seg.dat[["h.snp.d"]], h.seg.dat[["h.snp.annot"]], h.snp.gt.p, snp.clust.p)
 		h.seg.dat[["h.snp.d"]] <- merge.snp.res[["h.d"]]
-		# h.snp.gt.p <- merge.snp.res[["h.snp.gt.p"]]
 		h.seg.dat[["h.snp.gt.p"]] <- merge.snp.res[["h.snp.gt.p"]]
-		# h.probe.annot[['snp']] <- merge.snp.res[["h.probe.annot"]]
+		snp.clust.p <- merge.snp.res[["snp.clust.p"]]
 		h.seg.dat[["h.snp.annot"]] <- merge.snp.res[["h.probe.annot"]]
 		
 		merge.cn.res <- MergeTwoSegsExtreme(m.ix, m.ix + 1, h.seg.dat[["h.cn.d"]], h.seg.dat[["h.cn.annot"]])
-		# h.d[["cn"]] <- merge.cn.res[["h.d"]]
 		h.seg.dat[["h.cn.d"]] <- merge.cn.res[["h.d"]]
-		# h.probe.annot[['cn']] <- merge.cn.res[["h.probe.annot"]]
 		h.seg.dat[["h.cn.annot"]] <- merge.cn.res[["h.probe.annot"]]
+
+		if (!is.null(h.seg.dat[["h.capseg.d"]])) {
+			merge.cap.res <- MergeTwoSegsExtreme(m.ix, m.ix + 1, h.seg.dat[["h.capseg.d"]], h.seg.dat[["h.capseg.annot"]])
+			h.seg.dat[["h.capseg.d"]] <- merge.cn.res[["h.d"]]
+			h.seg.dat[["h.capseg.annot"]] <- merge.cn.res[["h.probe.annot"]]	
+		}
+
+		if (!is.null(h.seg.dat[["gh.wes.allele.d"]])) {
+			merge.gh.res <- MergeTwoSegsExtreme(m.ix, m.ix + 1, h.seg.dat[["gh.wes.allele.d"]], h.seg.dat[["gh.wes.allele.annot"]])
+			h.seg.dat[["gh.wes.allele.d"]] <- merge.gh.res[["h.d"]]
+			h.seg.dat[["gh.wes.allele.annot"]] <- merge.gh.res[["h.probe.annot"]]	
+		}
+		
 		
 		## update merging probs
 		nmp <- matrix(NA, nrow=0, ncol=ncol(merge.prob))
@@ -449,33 +457,18 @@ JoinCloseSegs <- function(h.seg.dat, theta, force.diploid, out.p, merge.thresh=0
 		seg.n.probes <- foreach(dt=d.types, .combine=cbind) %do% sapply(h.seg.dat[[dt]], ncol)
 		colnames(seg.n.probes) <- gsub("(^h\\.)|(\\.d$)", "", d.types)
 		
-		} ## End while(TRUE)	
-		return(list(h.seg.dat=h.seg.dat, merge.prob=merge.prob, merged.loci=merged.loci))
-	}
-
-	wl.res <- LoadCached({
-		wl.res <- WhileFunc()
-		saveRDS(wl.res, file.path(results.dir, "jcs.wlres.rds"))	
-		wl.res}, 
-		cached=T, res.fn=file.path(results.dir, "jcs.wlres.rds"), mod.name="WhileLoopJoinCloseSegs") 
-	
-	
-	h.seg.dat <- wl.res$h.seg.dat
-	merged.loci <- wl.res$merged.loci
-	merge.prob <- wl.res$merge.prob
+	} ## End while(TRUE)	
 	
 	if (length(merged.loci) > 0) {
 		colnames(merged.loci) <- c("chr", "pos", "prob", "log10_prob", "h0.log.ev.cn", "h0.log.ev.snp", "h1.log.ev.cn", "h1.log.ev.snp" )
 		colnames(merge.prob) <- c("merge.prob", "log10.merge.prob", "h0.log.ev.cn", "h0.log.ev.snp", "h1.log.ev.cn", "h1.log.ev.snp", "merge.prob.cn", "merge.prob.snp" )
 	}
 	
-	# list(h.d=list(snp=h.d[["snp"]], cn=h.d[["cn"]]), h.snp.gt.p=h.snp.gt.p, h.probe.annot=list(snp=h.probe.annot[['snp']], cn=h.probe.annot[['cn']]),
-	# 		merged.loci=merged.loci, final.merge.prob=merge.prob)
-	list(h.seg.dat=h.seg.dat, merged.loci=merged.loci, final.merge.prob=merge.prob)
+	list(h.seg.dat=h.seg.dat, snp.clust.p=snp.clust.p, merged.loci=merged.loci, final.merge.prob=merge.prob)
 }
 
 
-CalcSegMergeProbExtreme <- function(ix.1, ix.2, h.seg.dat, theta, force.diploid, out.p, verbose=FALSE) {
+CalcSegMergeProb <- function(ix.1, ix.2, h.seg.dat, theta, force.diploid, out.p, verbose=FALSE) {
 	## H0:  two segs are seperate
 	## H1:  two segs are same
 	
@@ -484,11 +477,11 @@ CalcSegMergeProbExtreme <- function(ix.1, ix.2, h.seg.dat, theta, force.diploid,
 	} else{
 		delta.tau <- NA
 	}
-	h0.res <- CalculateH0EvidenceExtreme(ix.1, ix.2, h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
+	h0.res <- CalculateH0Evidence(ix.1, ix.2, h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
 	h0.log.ev.cn <- h0.res[["cn"]]
 	h0.log.ev.snp <- h0.res[["snp"]]
 	
-	h1.res <- CalculateH1EvidenceExtreme(ix.1, ix.2, h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
+	h1.res <- CalculateH1Evidence(ix.1, ix.2, h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
 	h1.log.ev.cn <- h1.res[["cn"]]
 	h1.log.ev.snp <- h1.res[["snp"]]
 	
@@ -504,9 +497,6 @@ CalcSegMergeProbExtreme <- function(ix.1, ix.2, h.seg.dat, theta, force.diploid,
 	fact.prob <- c(h1.probs.cn[["log10.h1.prob"]], h1.probs.snp[["log10.h1.prob"]])
 	fact.prob <- fact.prob[complete.cases(fact.prob)]
 	comb.prob <- h1.probs[["log10.h1.prob"]]
-	if (abs(sum(fact.prob) - comb.prob) > 1) {
-		warning(paste("Factored probs differ by", signif(abs(h1.probs.cn[["log10.h1.prob"]]+h1.probs.snp[["log10.h1.prob"]] - h1.probs[["log10.h1.prob"]])), 2) )
-	}
 	
 	# return(list(merge.prob=h1.probs[["h1.prob"]], log10.merge.prob=h1.probs[["log10.h1.prob"]], merge.prob.cn = h1.probs.cn[["h1.prob"]], merge.prob.snp=h1.probs.snp[["h1.prob"]], h0.log.ev.cn=h0.log.ev.cn, h0.log.ev.snp=h0.log.ev.snp, h1.log.ev.cn=h1.log.ev.cn, h1.log.ev.snp=h1.log.ev.snp))
 
@@ -514,28 +504,10 @@ CalcSegMergeProbExtreme <- function(ix.1, ix.2, h.seg.dat, theta, force.diploid,
 
 }
 
-CalcSegMergeProb <- function(ix.1, ix.2, h.d, h.snp.gt.p, theta,
-                             force.diploid, out.p, verbose=FALSE) {
-  ## H0:  two segs are seperate
-  ## H1:  two segs are same
-  if (force.diploid == TRUE) {
-    e.mu <- c(1, 1, 2)
-  } else{
-    e.mu <- NA
-  }
-  h0.log.ev <- CalculateH0Evidence(ix.1, ix.2, h.d, h.snp.gt.p,
-                                   theta, out.p, e.mu, verbose=verbose)
-  h1.log.ev <- CalculateH1Evidence(ix.1, ix.2, h.d, h.snp.gt.p,
-                                   theta, out.p, e.mu, verbose=verbose)
-  h1.probs <- CalculateH1Probs(h0.log.ev, h1.log.ev)
 
-  return(list(merge.prob=h1.probs[["h1.prob"]],
-              log10.merge.prob=h1.probs[["log10.h1.prob"]]))
-}
-
-CalculateH1EvidenceExtreme <- function(ix.1, ix.2, h.seg.dat, theta, out.p, delta.tau, verbose=FALSE) {
+CalculateH1Evidence <- function(ix.1, ix.2, h.seg.dat, theta, out.p, delta.tau, verbose=FALSE) {
 	   
-	# browser()
+	
 	mrg.snp.d <- cbind(h.seg.dat[["h.snp.d"]][[ix.1]], h.seg.dat[["h.snp.d"]][[ix.2]])
  	mrg.cn.d <- cbind(h.seg.dat[["h.cn.d"]][[ix.1]], h.seg.dat[["h.cn.d"]][[ix.2]])
 	mrg.het.prob <- rbind(h.seg.dat[["h.snp.gt.p"]][[ix.1]], h.seg.dat[["h.snp.gt.p"]][[ix.2]])
@@ -579,13 +551,13 @@ CalculateH1EvidenceExtreme <- function(ix.1, ix.2, h.seg.dat, theta, out.p, delt
 		mrg.h.seg.dat[["h.snp.gt.p"]][[n.segs]] <- NULL
 	}
 	
-	res <- GetSegLogEvExtreme(ix.1, mrg.h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
+	res <- GetSegLogEv(ix.1, mrg.h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
 	log.ev.cn <- res[["log.ev.cn"]]
 	log.ev.snp <- res[["log.ev.snp"]]
 	return(list(cn=log.ev.cn, snp=log.ev.snp))
 }
 
-CalculateH1Evidence <- function(ix.1, ix.2, h.d, h.snp.gt.p, theta, out.p, e.mu, verbose=FALSE) {
+CalculateH1EvidenceDEP <- function(ix.1, ix.2, h.d, h.snp.gt.p, theta, out.p, e.mu, verbose=FALSE) {
   
   mrg.d <- cbind(h.d[[ix.1]], h.d[[ix.2]])
   mrg.het.prob <- rbind(h.snp.gt.p[[ix.1]], h.snp.gt.p[[ix.2]])
@@ -594,17 +566,10 @@ CalculateH1Evidence <- function(ix.1, ix.2, h.d, h.snp.gt.p, theta, out.p, e.mu,
 }
 
 
-CalculateH0EvidenceExtreme <- function(ix.1, ix.2, h.seg.dat, theta, out.p, delta.tau, verbose=FALSE) {
-	# GetLogEvN <- function(ix, verbose=FALSE) {
-	# 	# h.d.i = list(snp=h.d[["snp"]][[ix]], cn=h.d[["cn"]][[ix]])
-	# 	GetSegLogEvExtreme(ix, h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
-	# }
+CalculateH0Evidence <- function(ix.1, ix.2, h.seg.dat, theta, out.p, delta.tau, verbose=FALSE) {
 	
-	# ev1 <- GetLogEvN(ix.1, verbose=verbose)
-	# ev2 <- GetLogEvN(ix.2, verbose=verbose)
-	
-	ev1 <- GetSegLogEvExtreme(ix.1, h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
-	ev2 <- GetSegLogEvExtreme(ix.2, h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
+	ev1 <- GetSegLogEv(ix.1, h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
+	ev2 <- GetSegLogEv(ix.2, h.seg.dat, theta, out.p, delta.tau, verbose=verbose)
 	
 	log.ev1 <- ev1[["log.ev"]]
 	log.ev2 <- ev2[["log.ev"]]
@@ -618,7 +583,7 @@ CalculateH0EvidenceExtreme <- function(ix.1, ix.2, h.seg.dat, theta, out.p, delt
 }
 
 
-CalculateH0Evidence <- function(ix.1, ix.2, h.d, h.snp.gt.p,
+CalculateH0EvidenceDEP <- function(ix.1, ix.2, h.d, h.snp.gt.p,
                                 theta, out.p, e.mu, verbose=FALSE) {
   GetLogEvN <- function(ix, verbose=FALSE) {
     GetSegLogEv(h.d[[ix]], h.snp.gt.p[[ix]], theta, out.p, e.mu,
@@ -648,19 +613,19 @@ CalculateH1Probs <- function(h0.log.ev, h1.log.ev) {
 
 
 
-GetSegLogEvExtreme <- function(idx, h.seg.dat, theta, out.p, delta.tau=NA, verbose=FALSE) {
+GetSegLogEv <- function(idx, h.seg.dat, theta, out.p, delta.tau=NA, verbose=FALSE) {
 	
 	het.prob <- h.seg.dat[["h.snp.gt.p"]][[idx]]
 	GetSnpSegLL <- function(x, d, het.prob, theta, out.p) {
 		dist <- x[1]
 		total <- x[2]
-		return(sum(CalcSnpLogLik(d, delta.tau=x, out.p, het.prob, theta)))
+		return(sum(AffyCalcSnpLogLik(d, delta.tau=x, out.p, het.prob, theta)))
 	}
 	
 	GetCnSegLL = function(x, d, theta, out.p ) {
 		dist <- x[1]
 		total <- x[2]
-		return(sum(CalcCnLogLik(d, delta.tau=x, out.p, theta) ))
+		return(sum(AffyCalcCnLogLik(d, delta.tau=x, out.p, theta) ))
 	}
 	
 
@@ -669,48 +634,51 @@ GetSegLogEvExtreme <- function(idx, h.seg.dat, theta, out.p, delta.tau=NA, verbo
 		init.tau <- sapply(seq_along(h.seg.dat[["h.snp.d"]]), function(i) {
 				snp.d <- colSums(h.seg.dat[["h.snp.d"]][[i]])
 				cn.d <- h.seg.dat[["h.cn.d"]][[i]]
-				capseg.d <- h.seg.dat[["h.capseg.d"]][[i]]
-				median(c(snp.d, cn.d, capseg.d ) ) 
+				d <- c(snp.d, cn.d)
+				median(d)
 			}
 		)
 		quart <- init.tau / 4   
 		init.e.mu <- c(quart, init.tau - quart, init.tau)
 		init.delta <- 2 * (init.tau - quart) - init.tau
 		
-		delta.tau <- GridstartH1OptMeansExtreme(idx, h.seg.dat, delta.tau=cbind(init.delta, init.tau), out.p, theta, verbose=verbose)
+		delta.tau <- GridstartH1OptMeans(idx, h.seg.dat, delta.tau=cbind(init.delta, init.tau), out.p, theta, verbose=verbose)
 	}
 	
 	tau <- delta.tau[2]
 	dist <- delta.tau[1]
 	
-	hess.mat.snp <- hessian(GetSnpSegLL, c(dist, tau), "Richardson", d=h.seg.dat[["h.snp.d"]][[idx]], het.prob=het.prob, theta=theta, out.p=out.p) 
-	curv.snp <- abs(det(hess.mat.snp / (2 * pi)))
-	ll.snp <- GetSnpSegLL(c(dist, tau), h.seg.dat[["h.snp.d"]][[idx]], het.prob, theta, out.p); 
-	log.ev.snp <- ll.snp + (log((curv.snp)^(-1 / 2))) - (log((5 / 2)^2))
-	
-	hess.mat.cn <- hessian(GetCnSegLL, c(dist, tau), "Richardson", d=h.seg.dat[["h.cn.d"]][[idx]], theta=theta, out.p=out.p) 
-	curv.cn <- abs(det(hess.mat.cn / (2 * pi)))
-	ll.cn <- GetCnSegLL(c(dist, tau), h.seg.dat[["h.cn.d"]][[idx]], theta, out.p); 
-	log.ev.cn <- ll.cn + (log((curv.cn)^(-1 / 2))) - log(5)
-	
-	if (all(c("snp", "cn") %in% PROBE.TYPES)) {
-		return(list(log.ev=log.ev.snp + log.ev.cn, ll=ll.snp + ll.cn, log.ev.snp=log.ev.snp, log.ev.cn=log.ev.cn, ll.snp=ll.snp, ll.cn=ll.cn))
-	} else if ("snp" %in% PROBE.TYPES) {
-		return(list(log.ev=log.ev.snp, ll=ll.snp, log.ev.snp=log.ev.snp, log.ev.cn=log.ev.cn, ll.snp=ll.snp, ll.cn=ll.cn))
-	} else if ("cn" %in% PROBE.TYPES) {
-		return(list(log.ev=log.ev.cn, ll=ll.cn, log.ev.snp=log.ev.snp, log.ev.cn=log.ev.cn, ll.snp=ll.snp, ll.cn=ll.cn))
+	if (length(h.seg.dat[["h.snp.d"]][[idx]]) != 0) {
+		hess.mat.snp <- hessian(GetSnpSegLL, c(dist, tau), "Richardson", d=h.seg.dat[["h.snp.d"]][[idx]], het.prob=het.prob, theta=theta, out.p=out.p) 
+		curv.snp <- abs(det(hess.mat.snp / (2 * pi)))
+		ll.snp <- GetSnpSegLL(c(dist, tau), h.seg.dat[["h.snp.d"]][[idx]], het.prob, theta, out.p); 
+		log.ev.snp <- ll.snp + (log((curv.snp)^(-1 / 2))) - (log((5 / 2)^2))	
 	} else {
-		stop ("cn or snp wasn't found in PROBE.TYPES when trying to GetSegLogEvExtreme")
+		ll.snp <- 0
+		log.ev.snp <- 0
 	}
+	
+	if (length(h.seg.dat[["h.cn.d"]][[idx]]) != 0) {
+		hess.mat.cn <- hessian(GetCnSegLL, c(dist, tau), "Richardson", d=h.seg.dat[["h.cn.d"]][[idx]], theta=theta, out.p=out.p) 
+		curv.cn <- abs(det(hess.mat.cn / (2 * pi)))
+		ll.cn <- GetCnSegLL(c(dist, tau), h.seg.dat[["h.cn.d"]][[idx]], theta, out.p); 
+		log.ev.cn <- ll.cn + (log((curv.cn)^(-1 / 2))) - log(5)
+	} else {
+		ll.cn <- 0
+		log.ev.cn <- 0	
+	}
+
+	return(list(log.ev=log.ev.snp + log.ev.cn, ll=ll.snp + ll.cn, log.ev.snp=log.ev.snp, log.ev.cn=log.ev.cn, ll.snp=ll.snp, ll.cn=ll.cn))
+	
 }
 
-GetSegLogEv <- function(d, het.prob, theta, out.p, e.mu=NA, verbose=FALSE) {
+GetSegLogEvDEP <- function(d, het.prob, theta, out.p, e.mu=NA, verbose=FALSE) {
   GetSegLL <- function(x, d, het.prob, theta, out.p) {
     dist <- x[1]
     total <- x[2]
     e.mu <-  c((total / 2 - dist / 2), (total / 2 + dist / 2), total)
 
-    return(sum(CalcSnpLogLik(d, e.mu, out.p, het.prob, theta)))
+    return(sum(AffyCalcSnpLogLik(d, e.mu, out.p, het.prob, theta)))
   }
 
   if (is.na(e.mu)) {

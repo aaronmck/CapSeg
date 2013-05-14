@@ -15,9 +15,7 @@ AbsolutePostProcess <- function(res, seg.dat) {
 	# seg.dat <- res[["seg.dat"]]
 	add <- data.frame(f=res[["em.fit"]][["wes.f"]][, "f.hat"], tau=res[["em.fit"]][["delta.tau"]][, "tau"], sigma.tau=res[["em.fit"]][["cap.e.mu"]][, "sigma3"], mu.minor=res[["em.fit"]][["cap.e.mu"]][, 'mu1'], sigma.minor=res[["em.fit"]][["cap.e.mu"]][,"sigma1"], mu.major=res[["em.fit"]][["cap.e.mu"]][, "mu2"], sigma.major=res[["em.fit"]][["cap.e.mu"]][, "sigma2"], stringsAsFactors=F)
 
-	print(summary(seg.dat))
-        print(dim(add))
-        print(summary(res$seg.dat))
+
 	out <- cbind(seg.dat, add)
 	return(out)
 }
@@ -26,13 +24,13 @@ ArrayWesConcordanceStat <- function(res) {
 	# res <- iams.res
 
 	require(mnormt)
-	unatten.snp.mu <- t(apply(res[["em.fit"]][["delta.tau"]], 1, function(x) GetMeans(x[1], x[2])))
+	unatten.snp.mu <- t(apply(res[["em.fit"]][["delta.tau"]], 1, function(x) AffyGetMeans(x[1], x[2])))
 
 	n.segs = length(res[["em.fit"]][["cap.e.mu"]][,"mu1"])
 	snp.mu <- c(unatten.snp.mu[,1], unatten.snp.mu[,2], unatten.snp.mu[,3] )
-	wes.mu <- c(InvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu1"], res[["em.fit"]][["theta"]][["at.capseg"]]),
-			InvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu2"], res[["em.fit"]][["theta"]][["at.capseg"]]),
-			InvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu3"], res[["em.fit"]][["theta"]][["at.capseg"]]) )
+	wes.mu <- c(AffyInvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu1"], res[["em.fit"]][["theta"]][["at.capseg"]]),
+			AffyInvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu2"], res[["em.fit"]][["theta"]][["at.capseg"]]),
+			AffyInvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu3"], res[["em.fit"]][["theta"]][["at.capseg"]]) )
 
 	snp.sigma = rep((res[["em.fit"]][["delta.tau.sd"]][, "tau"]^2 + res[["em.fit"]][["delta.tau.sd"]][, "delta"]^2)^(1/2) / 2, 3)
 
@@ -76,8 +74,8 @@ GetGCContent = function(seg.dat, verbose=FALSE) {
 	return(gc.perc)
 }
 
-LoadCached = function(statement, cached, res.fn, mod.name) {
-	if (cached) {
+LoadCached = function(statement, overwrite, res.fn, mod.name) {
+	if (!overwrite) {
 		if (file.exists(res.fn)) {
 			print(paste(mod.name, " result already computed.  Returning cached version."))
 			res = readRDS(res.fn)
@@ -172,8 +170,8 @@ CheckGenomeBuild <- function(genome.build) {
   return(genome.build %in% c("hg18", "hg19"))
 }
 
-CreateTmpDir <- function(results.dir) {
-  tmp.dir <- file.path(results.dir, "tmp")
+CreateTmpDir <- function(RESULTS.DIR) {
+  tmp.dir <- file.path(RESULTS.DIR, "tmp")
   dir.create(tmp.dir, recursive=TRUE, showWarnings=FALSE)
   return(tmp.dir)
 }
@@ -206,7 +204,7 @@ ReadCol <- function(fn, col.name, save.rownames=FALSE) {
   return(df)
 }
 
-GetChromPlotDir <- function(chrom, results.dir) {
-  return(file.path(results.dir, paste("chr", chrom, sep="")))
+GetChromPlotDir <- function(chrom, RESULTS.DIR) {
+  return(file.path(RESULTS.DIR, paste("chr", chrom, sep="")))
 }
 

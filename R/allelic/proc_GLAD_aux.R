@@ -28,7 +28,7 @@ ReadGladMat <- function(glad.fn, sample.name=NULL, drop.x=TRUE, drop.y=TRUE, gla
   }
 
   glad.mat[, 2] <- sub("chr", "", glad.mat[, 2])
-  # print(summary(glad.mat))
+
   ## enforce standard (GCM) names
   colnames(glad.mat) <- c( "Sample", "Chromosome", "Start.bp", "End.bp", "Num.Probes",
                           "Seg.CN" )
@@ -97,7 +97,6 @@ ReadGladMat <- function(glad.fn, sample.name=NULL, drop.x=TRUE, drop.y=TRUE, gla
 
   seg.info <- matrix(as.numeric(seg.info), nrow=nrow(seg.info), ncol=ncol(seg.info))
   colnames(seg.info) <- cnames
-  print("HERE4")
   if (verbose) {
     print(seg.info[1:10, 1])
   }

@@ -1,5 +1,5 @@
 
-InitAndMergeSmall = function(chr.truncate=NULL, cached=F, fn="iams.res.rds") {
+InitAndMergeSmall = function(chr.truncate=NULL, overwrite=FALSE, fn="iams.res.rds") {
 	print("Init and Merge Small")	
 	
 	LoadCached(iams.res <- ExtractProbeDat(array.name, capseg.sample.name, genome.build, use.pop, use.normal,
@@ -11,10 +11,10 @@ InitAndMergeSmall = function(chr.truncate=NULL, cached=F, fn="iams.res.rds") {
 					snp.file.parser=snp.file.parser,
 					cn.file.parser=cn.file.parser,
 					clusters.file.parser=clusters.file.parser), 
-			cached=cached, res.fn=file.path(results.dir, "extracted.probe.dat.rds"), mod.name="Init and Merge Small")
+			cached=cached, res.fn=file.path(RESULTS.DIR, "extracted.probe.dat.rds"), mod.name="Init and Merge Small")
 	
-#	saveRDS(iams.res, file=file.path(results.dir, "extracted.probe.dat.rds"))
-#	iams.res = readRDS(file.path(results.dir, "extracted.probe.dat.rds"))
+#	saveRDS(iams.res, file=file.path(RESULTS.DIR, "extracted.probe.dat.rds"))
+#	iams.res = readRDS(file.path(RESULTS.DIR, "extracted.probe.dat.rds"))
 	
 	TruncateData = function(res, chr) {
 		trunc.elem = c("h.snp.d", "h.cn.d", "h.capseg.d", "h.snp.gt.p", "h.snp.annot", "h.cn.annot", "h.capseg.annot")
@@ -76,14 +76,14 @@ InitAndMergeSmall = function(chr.truncate=NULL, cached=F, fn="iams.res.rds") {
 	iams.res[["em.fit"]] <- HscrSegFitExtreme(iams.res[["as.res"]][["h.seg.dat"]], iams.res[["em.fit"]][["theta"]], eps=iams.res[["use.eps"]], out.p=out.p, 
 			force.diploid=force.diploid, verbose=verbose)
 	
-	saveRDS(iams.res, file=file.path(results.dir, fn))
+	saveRDS(iams.res, file=file.path(RESULTS.DIR, fn))
 	return(iams.res)
 }
 
-MergeCloseAndFit = function(iams.res, cached=F, fn="mcaf.res.rds") {
+MergeCloseAndFit = function(iams.res, overwrite=FALSE, fn="mcaf.res.rds") {
 	
 	print("Merge Close and Fit")
-	CheckCaching(cached, file.path(results.dir, "image_at_mcaf_res.rda"), "Merge close and Fit")
+	CheckCaching(cached, file.path(RESULTS.DIR, "image_at_mcaf_res.rda"), "Merge close and Fit")
 	
 	if (merge.close == TRUE) {
 		mcaf.res = iams.res
@@ -120,11 +120,11 @@ MergeCloseAndFit = function(iams.res, cached=F, fn="mcaf.res.rds") {
 		
 	}
 	
-	saveRDS(mcaf.res, file=file.path(results.dir, "mcaf.res.rds"))
+	saveRDS(mcaf.res, file=file.path(RESULTS.DIR, "mcaf.res.rds"))
 	return(mcaf.res)
 }
 
-ImputeGT = function(cached=F, fn="gt.res.rds") {
+ImputeGT = function(overwrite=FALSE, fn="gt.res.rds") {
 	
 		
 		ps.res <- PhaseSnps(mcaf.res[["em.fit"]][["snp.clust.p"]], mcaf.res[["as.res"]][["h.seg.dat"]][["h.snp.gt.p"]], 

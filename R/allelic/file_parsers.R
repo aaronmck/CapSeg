@@ -1,15 +1,16 @@
-DefaultGermlineHetFileParser = function(germline.het.fn)
-{
+
+DefaultGermlineHetFileParser = function(germline.het.fn) {
    dat = read.csv(germline.het.fn, stringsAsFactors=FALSE, check.names=FALSE, blank.lines.skip=TRUE, comment.char="#")
-   print(summary(dat))
+   colnames(dat) <- c("Chromosome","Start_position","i_t_ref_count","i_t_alt_count","aBase","bBase","dbSNPOrientation","referenceAlleleListed","referenceAllele")
+
    if (!all((dat$Start_position == dat$End_position))) stop (paste("There's something wrong with the Germline Het Table."))
 
-   dat$Chromosome = as.character(gsub("Y", "24", gsub("X", "23", dat$contig)))
-
+   dat$Chromosome = as.character(gsub("Y", "24", gsub("X", "23", dat$Chromosome)))
    return(dat)
 }
 
-DefaultCapsegFileParser = function(capseg.probe.fn, drop.y=TRUE) {
+DefaultCapsegFileParser = function(capseg.probe.fn, drop.x, drop.y) {
+
 	capseg.d = read.delim(capseg.probe.fn, strings=F)
 	rownames(capseg.d) <- capseg.d[,1]
 	capseg.d[,1] <- NULL
@@ -26,11 +27,10 @@ DefaultCapsegFileParser = function(capseg.probe.fn, drop.y=TRUE) {
 	if (drop.x) {
 		capseg.d = capseg.d[capseg.d$Chromosome != "23", ]
 	}
-
 	return(capseg.d)
 }
 
-DefaultSnpFileParser <- function(snp.fn, verbose=FALSE) {
+DefaultSnpFileParser <- function(snp.fn, sample.name=NULL, verbose=FALSE) {
   snp.try <- try(load(snp.fn), silent=TRUE)
   ## FIXME: Some of Scott's old data uses RData inputs instead of
   ## text snp files. These are already diced per-sample and don't need

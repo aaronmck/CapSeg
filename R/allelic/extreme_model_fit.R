@@ -20,8 +20,8 @@ HscrSegFitExtreme <- function(h.seg.dat, theta, eps=1e-5, out.p=1e-3, min.iter=1
    }
    smms = LoadCached({
             smms <- SegMeansMStepsExtreme(h.seg.dat, out.p, theta, eps, force.diploid, min.iter, max.iter, verbose=verbose)
-            saveRDS (smms, file = file.path(results.dir, "smms.res.rds"))
-            smms }, cached=T, res.fn = file.path(results.dir, "smms.res.rds"), mod.name="SegMeansMStepsExtreme")
+            saveRDS (smms, file = file.path(RESULTS.DIR, "smms.res.rds"))
+            smms }, overwrite=TRUE, res.fn = file.path(RESULTS.DIR, "smms.res.rds"), mod.name="SegMeansMStepsExtreme")
    
    theta <- smms[["theta"]]
    h.snp.clust.p <- smms[["h.snp.clust.p"]]
@@ -43,36 +43,6 @@ HscrSegFitExtreme <- function(h.seg.dat, theta, eps=1e-5, out.p=1e-3, min.iter=1
                delta.tau.sd=delta.tau.sd, sigma.h=smms[["sigma.h"]], loglik=smms[["loglik"]],
                seg.log.ev=seg.log.ev, seg.expected.phase=seg.expected.phase,
                theta=theta, wes.f=wes.f, het.phase.log.p=het.phase.log.p, cap.e.mu=cap.e.mu))
-}
-
-
-BuildSegLogEvExtreme <- function(h.seg.dat, theta, out.p, delta.tau, verbose=verbose) {
-#   out = c()
-#   for (i in seq(length(h.seg.dat[["h.snp.d"]])) ) {
-#      d = list(snp = h.seg.dat[["h.snp.d"]][[i]], cn = h.seg.dat[["h.cn.d"]][[i]] )
-#      out = c(out, GetSegLogEvExtreme(d, h.seg.dat[["h.snp.gt.p"]][[i]], theta, out.p, e.mu=h.e.mu[i, ])[[1]])
-#   }
-#   return(out)
-   
-   foreach(i = seq(length(h.seg.dat[["h.snp.d"]])), .combine=c) %dopar% {
-      d = list(snp = h.seg.dat[["h.snp.d"]][[i]], cn = h.seg.dat[["h.cn.d"]][[i]] )
-#      GetSegLogEvExtreme(d, h.seg.dat[["h.snp.gt.p"]][[i]], theta, out.p, delta.tau=delta.tau[i, ])[[1]]
-      GetSegLogEvExtreme(i, h.seg.dat, het.prob=h.seg.dat[["h.snp.gt.p"]][[i]], theta, out.p, delta.tau=delta.tau, verbose=verbose)[[1]]
-   }
-}
-
-
-BuildHMuSdExtreme <- function(h.seg.dat, delta.tau, out.p, theta, verbose=verbose) {
-   h.mu.sd <- foreach(i = seq(length(h.seg.dat[["h.snp.d"]])), .combine=rbind) %dopar% {
-#   h.mu.sd <- mclapply(seq(length(h.seg.dat[["h.snp.d"]])), mc.cores=15, function(i) {
-#   h.mu.sd <- lapply(seq(length(h.seg.dat[["h.snp.d"]])), function(i) {
-#      loopStatus(i,1)
-      SegPostSdExtreme(h.seg.dat[["h.snp.d"]][[i]], h.seg.dat[["h.cn.d"]][[i]], delta.tau[i, ], out.p, h.seg.dat[["h.snp.gt.p"]][[i]], theta)
-      
-   }
-   colnames(h.mu.sd) <- c("delta", "tau")
-   rownames(h.mu.sd) <- NULL
-   h.mu.sd
 }
 
 
@@ -131,3 +101,33 @@ SegMeansMStepsExtreme <- function(h.seg.dat, out.p, theta, eps, force.diploid, m
 
 
    
+InitDeltaAndTauExtreme <- function(h.seg.dat, theta, seg.info, force.diploid) {
+   
+   ## just return delta and tau
+   
+    n.segs <- length(h.seg.dat[[1]])
+   if (force.diploid) {
+      h.e.mu <- array(NA, dim=c(n.segs, 3))
+      for (i in seq(n.segs)) {
+         h.e.mu[i, ] <- c(1, 1, 2)
+      }
+   } else {
+      init <- function(x) {
+         d <- foreach(i=c("h.snp.d", "h.cn.d", "h.capseg.d"), .combine=c) %do% {colSums(h.seg.dat[[i]][[x]])}
+         out = median(d)
+         out = ifelse(is.na(out), 2, out)
+         return(median(out))   
+      }
+      h.mu.t <- unlist(lapply(1:n.segs, init))
+      
+      h.mu.t[h.mu.t < 0] <- 0
+      i.mu.t <- h.mu.t
+      quart <- i.mu.t / 4
+      # h.e.mu <- cbind(quart, i.mu.t - quart, i.mu.t)
+      
+      delta = 2 * (i.mu.t - quart) - i.mu.t
+      tau = i.mu.t
+      dt = cbind(delta, tau)
+   }
+   return(dt)
+}

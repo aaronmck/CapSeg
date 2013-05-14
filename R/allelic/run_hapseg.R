@@ -9,7 +9,7 @@
 ## use, misuse, or functionality.
 
 RunHapSeg <- function(plate.name, array.name, seg.fn, snp.fn, 
-                      genome.build, results.dir, platform, use.pop, impute.gt,
+                      genome.build, RESULTS.DIR, platform, use.pop, impute.gt,
                       plot.segfit, merge.small, merge.close, min.seg.size,
                       normal, out.p, seg.merge.thresh, use.normal, adj.atten,
                       phased.bgl.dir, force.diploid=normal, drop.x=FALSE,
@@ -26,7 +26,7 @@ RunHapSeg <- function(plate.name, array.name, seg.fn, snp.fn,
 
   ## Note that we're not using the built in R tmpdir() due to
   ## potential space issues
-  tmp.dir <- CreateTmpDir(results.dir)
+  tmp.dir <- CreateTmpDir(RESULTS.DIR)
   on.exit(try(unlink(tmp.dir, recursive=TRUE), silent=TRUE), add=TRUE)
 
   iams.res <- InitAndMergeSmall(array.name, genome.build, use.pop, use.normal,
@@ -66,11 +66,11 @@ RunHapSeg <- function(plate.name, array.name, seg.fn, snp.fn,
   }
 
   seg.dat <- FinishHapsegAndSave(gt.res, plate.name, normal, array.name,
-                                 results.dir, platform, out.file)
+                                 RESULTS.DIR, platform, out.file)
 
   ## final step - plot all of the data
   if (plot.segfit) {
-    DoPlots(seg.dat, results.dir, platform, verbose=verbose)
+    DoPlots(seg.dat, RESULTS.DIR, platform, verbose=verbose)
   } 
 
   return(TRUE)

@@ -11,14 +11,14 @@
 
 
 
-ExtractCaptureDat <- function(capseg.probe.fn=NULL, seg.dat, germline.het.fn, verbose=FALSE, germline.het.file.parser=DefaultGermlineHetFileParser)
-{
-  capseg.d = DefaultCapsegFileParser(capseg.probe.fn)
-  print("HEREREERERER")
-  germline.hets = germline.het.file.parser(germline.het.fn )
-  print("HEREREERERER2")
+ExtractCaptureDat <- function(capseg.probe.fn=NULL, seg.dat, germline.het.fn, drop.x, drop.y, verbose=FALSE,
+  germline.het.file.parser=DefaultGermlineHetFileParser) {
+
+  capseg.d = DefaultCapsegFileParser(capseg.probe.fn, drop.x=drop.x, drop.y=drop.y)
+  germline.hets = germline.het.file.parser(germline.het.fn)
+
   h.seg.dat <- GetCaptureAsSegs(seg.dat, capseg.d, germline.hets, verbose=verbose)
-  print("HEREREERERER2222")
+
   return(list(seg.dat=seg.dat, as.res=list(h.seg.dat=h.seg.dat)))
 }
 
@@ -87,12 +87,11 @@ ExtractArrayDat <- function(array.name, genome.build, use.pop, use.normal,
   return(list(seg.dat=seg.dat, as.res=as.res))
 }
 
-## TODO: tumor.sample.barcode is no longer used / needed
-## Fix code that calls this functon and remove arg.
+
 ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.pop, use.normal,
-  normal, impute.gt, adj.atten, platform,
+  normal, impute.gt, adj.atten,
   seg.dat, snp.fn=NULL, cn.fn,  capseg.probe.fn=NULL, germline.het.fn, tumor.sample.barcode,
-  calls.fn, mn.sample,
+  calls.fn, mn.sample, drop.x, drop.y,
   calibrate.data=FALSE, clusters.fn=NULL, verbose=FALSE,
   snp.file.parser=DefaultSnpFileParser,
   cn.file.parser=DefaultCnFileParser,
@@ -102,8 +101,8 @@ ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.po
 	## Returns:
 	## seg.dat - segmentation data file
 	## as.res - allele specific segmentation data from all probe types
-
-
+	drop
+  platform <- "SNP_6.0"
   data(list=GetPlatformDataName(platform), package="HAPSEG")
   if (! genome.build %in% names(platform.annots)) {
     stop("Unsupported genome build, ", genome.build,
@@ -157,8 +156,8 @@ ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.po
   }
 
   if (!is.null(capseg.probe.fn)) {
-  	capseg.d = capseg.file.parser(capseg.probe.fn)
-  	germline.hets = germline.het.file.parser(germline.het.fn )
+  	capseg.d <- capseg.file.parser(capseg.probe.fn, drop.x, drop.y)
+  	germline.hets <- germline.het.file.parser(germline.het.fn)
 
   }
 
@@ -171,16 +170,14 @@ ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.po
 }
 
 
-CreateMergedSegFile <- function(array.seg.fn, capseg.seg.fn, drop.x, drop.y) {
+CreateMergedSegFile <- function(array.seg.fn, array.name, capseg.seg.fn, capseg.sample.name, drop.x, drop.y, verbose=FALSE) {
   # Output seg file is a seg file from the union of breakpoints of the input seg files.
 
   if (!is.null(array.seg.fn)) {
-    array.seg.dat <- ReadGladMat(array.seg.fn, array.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, type="snp",
-      verbose=verbose)[[1]]
+    array.seg.dat <- ReadGladMat(array.seg.fn, array.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, type="snp", verbose=verbose)[[1]]
   }
   if (!is.null(capseg.seg.fn)) {
-    capseg.seg.dat <- ReadGladMat(capseg.seg.fn, capseg.sample.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y,
-      type="capseg", verbose=verbose)[[1]]
+    capseg.seg.dat <- ReadGladMat(capseg.seg.fn, capseg.sample.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, type="capseg", verbose=verbose)[[1]]
   }
 
 

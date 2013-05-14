@@ -8,6 +8,32 @@
 ## whatsoever. Neither the Broad Institute nor MIT can be responsible for its
 ## use, misuse, or functionality.
 
+FastDmvt <- function(x, delta, sigma, invert.sigma=NULL, df=1, log=TRUE) {
+#  if (is.null(invert.sigma)) {
+#    invert.sigma <- solve(sigma)
+#  }
+  
+  if (df == 0) {
+    return(DmvNorm(x, delta, sigma, log=log))
+  }
+
+  sigma.ncol <- NCOL(sigma)
+
+ # dist.val <- mahalanobis(x, delta, invert.sigma, inverted=TRUE)
+  dist.val <- mahalanobis(x, delta, sigma)
+  log.det <- sum(log(eigen(sigma, TRUE, only.values=TRUE)[["values"]]))
+  log.retval <- lgamma((sigma.ncol + df) / 2) - (lgamma(df / 2) + 0.5 *
+                                                 (log.det + sigma.ncol * logb(pi * df))) -
+                                                   0.5 * (df + sigma.ncol) *
+                                                     logb(1 + dist.val / df)
+  if (!log) {
+    log.retval <- exp(log.retval)
+  }
+  
+  return(log.retval)
+}
+
+
 LogAdd <- function(X) {
      ##  Calculates log( sum(exp(x)) )  without 'leaving' log space
     if (is.vector(X)) {

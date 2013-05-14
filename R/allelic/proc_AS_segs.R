@@ -96,257 +96,266 @@ PostCalibrateAsDat <- function(dat, snp.tx, adj.atten=FALSE, verbose=FALSE) {
       a.at.hat <- snp.tx[, 7]
       b.at.hat <- snp.tx[, 8]
 
-      tx.snp.dat[, 1] <- InvAtten(tx.snp.dat[,1], a.at.hat)
-      tx.snp.dat[, 2] <- InvAtten(tx.snp.dat[,2], b.at.hat)
+      tx.snp.dat[, 1] <- AffyInvAtten(tx.snp.dat[,1], a.at.hat)
+      tx.snp.dat[, 2] <- AffyInvAtten(tx.snp.dat[,2], b.at.hat)
    }
 
    return(tx.snp.dat)
 }
 
 GetAlleleSegData <- function(snp.d, cn.d, capseg.d, germline.hets, snp.annot, glad.mat, snp.freqs,
-      use.pop, use.normal, normal,
-      bad.snps, dbSNP.annot, impute.gt,
-      mn.calls.fn, mn.sample, verbose=FALSE) {
 
-   ## First process SNP probes
+		use.pop, use.normal, normal,
+		bad.snps, dbSNP.annot, impute.gt,
+		mn.calls.fn, mn.sample, verbose=FALSE) {
 
-   ## remove SNPs with NAs
-   sna <- apply(is.na(snp.d), 1, sum)
-   snp.d <- snp.d[sna == 0, ]
+	## First process SNP probes
 
-   snp.d <- snp.d[intersect(rownames(snp.annot), rownames(snp.d)), ]
-   snp.d <- cbind(snp.annot[rownames(snp.d), ], snp.d)
+	## remove SNPs with NAs
+	sna <- apply(is.na(snp.d), 1, sum)
+	snp.d <- snp.d[sna == 0, ]
 
-   ## remove 'Bad' SNPs
-   if (!is.na(bad.snps)) {
-      bad <- which(rownames(snp.d) %in% bad.snps)
-      snp.d <- snp.d[-bad, ]
-      if (verbose) {
-         print(paste("Removing ", sum(bad), " \'bad\' SNPs", sep=""))
-      }
-   }
+	snp.d <- snp.d[intersect(rownames(snp.annot), rownames(snp.d)), ]
+	snp.d <- cbind(snp.annot[rownames(snp.d), ], snp.d)
 
-   ## check for matched-normal sample
-   found.matched.normal <- FALSE
-   mn.calls <- NULL
+	## remove 'Bad' SNPs
+	if (!is.na(bad.snps)) {
+		bad <- which(rownames(snp.d) %in% bad.snps)
+		snp.d <- snp.d[-bad, ]
+		if (verbose) {
+			print(paste("Removing ", sum(bad), " \'bad\' SNPs", sep=""))
+		}
+	}
 
-   ## read matched-norm GT calls
-   ## These days mn.sample should only be passed in as a string or NULL,
-   ## but historically it was NA or even "NA" so catch these cases just
-   ## in case old scripts are used
-   if (!normal && use.normal && (!is.null(mn.sample)) &&
-         (!is.na(mn.sample)) && (mn.sample != "NA")) {
-      if (is.null(mn.calls.fn)) {
-         stop("Matched normal sample specified, but no calls file provided")
-      }
-      if (verbose) {
-         print("reading column data")
-      }
-      mn.calls <- ReadCol(mn.calls.fn, mn.sample, save.rownames=TRUE)
-   }
+	## check for matched-normal sample
+	found.matched.normal <- FALSE
+	mn.calls <- NULL
 
-   if (verbose) {
-      print(summary(mn.calls))
-   }
+	## read matched-norm GT calls
+	## These days mn.sample should only be passed in as a string or NULL,
+	## but historically it was NA or even "NA" so catch these cases just
+	## in case old scripts are used
+	if (!normal && use.normal && (!is.null(mn.sample)) &&
+			(!is.na(mn.sample)) && (mn.sample != "NA")) {
+		if (is.null(mn.calls.fn)) {
+			stop("Matched normal sample specified, but no calls file provided")
+		}
+		if (verbose) {
+			print("reading column data")
+		}
+		mn.calls <- ReadCol(mn.calls.fn, mn.sample, save.rownames=TRUE)
+	}
 
-   if (use.normal && (!is.null(mn.calls))) {
-      found.matched.normal <- TRUE
+	if (verbose) {
+		print(summary(mn.calls))
+	}
 
-      mn.calls <- mn.calls[rownames(snp.d), ]
-      snp.gt.p <- matrix(0, nrow=4, ncol=length(mn.calls), byrow=TRUE)
-      snp.gt.p[, mn.calls == 1] <- c(0.015, 0.985, 0.015, 0.985) / 2
-      snp.gt.p[, mn.calls == 0] <- c(0.005, 0.005, 0.985, 0.005)
-      snp.gt.p[, mn.calls == 2] <- c(0.985, 0.005, 0.005, 0.005)
-      snp.gt.p[, mn.calls == -1] <- c(0.39, 0.11, 0.39, 0.11)
+	if (use.normal && (!is.null(mn.calls))) {
+		found.matched.normal <- TRUE
 
-      snp.gt.p <- t(snp.gt.p)
+		mn.calls <- mn.calls[rownames(snp.d), ]
+		snp.gt.p <- matrix(0, nrow=4, ncol=length(mn.calls), byrow=TRUE)
+		snp.gt.p[, mn.calls == 1] <- c(0.015, 0.985, 0.015, 0.985) / 2
+		snp.gt.p[, mn.calls == 0] <- c(0.005, 0.005, 0.985, 0.005)
+		snp.gt.p[, mn.calls == 2] <- c(0.985, 0.005, 0.005, 0.005)
+		snp.gt.p[, mn.calls == -1] <- c(0.39, 0.11, 0.39, 0.11)
 
-      if (verbose) {
-         n.het <- sum(mn.calls == 1)
-         print(paste("Normal ", round(n.het / length(mn.calls) * 100, 2), "% Het",
-                     sep=""))
-      }
-   } else {
-      if (is.na(use.pop) || use.pop == "NA") {
-         if (verbose) {
-            print("Using Null pop.")
-         }
-         snp.gt.p <- matrix(c(0.39, 0.11, 0.39, 0.11), nrow=nrow(snp.d), ncol=4,
-               byrow=TRUE)
-      } else {
-         if (verbose) {
-            print(paste( "Using population allele-frequency data for: ",
-                        use.pop, sep=""))
-         }
-         ## lookup population allele-frequencies
-         pop.cols <- c(paste(use.pop, "_A",sep=""),  paste(use.pop, "_B", sep=""))
+		snp.gt.p <- t(snp.gt.p)
 
-         ## match SNP names
-         snp.freqs <- snp.freqs[intersect(rownames(snp.d), rownames(snp.freqs)), ]
+		if (verbose) {
+			n.het <- sum(mn.calls == 1)
+			print(paste("Normal ", round(n.het / length(mn.calls) * 100, 2), "% Het",
+							sep=""))
+		}
+	} else {
+		if (is.na(use.pop) || use.pop == "NA") {
+			if (verbose) {
+				print("Using Null pop.")
+			}
+			snp.gt.p <- matrix(c(0.39, 0.11, 0.39, 0.11), nrow=nrow(snp.d), ncol=4,
+					byrow=TRUE)
+		} else {
+			if (verbose) {
+				print(paste( "Using population allele-frequency data for: ",
+								use.pop, sep=""))
+			}
+			## lookup population allele-frequencies
+			pop.cols <- c(paste(use.pop, "_A",sep=""),  paste(use.pop, "_B", sep=""))
 
-         ## pseduo-count
-         freqs <- snp.freqs[, pop.cols] + 0.01
-         freqs <- freqs / rowSums(freqs)
+			## match SNP names
+			snp.freqs <- snp.freqs[intersect(rownames(snp.d), rownames(snp.freqs)), ]
 
-         aa.probs <- freqs[, 1]^2
-         bb.probs <- freqs[, 2]^2
-         het.probs <- 1 - (aa.probs + bb.probs)
+			## pseduo-count
+			freqs <- snp.freqs[, pop.cols] + 0.01
+			freqs <- freqs / rowSums(freqs)
 
-         snp.gt.p <- rbind(bb.probs, het.probs / 2, aa.probs, het.probs / 2)
-         colnames(snp.gt.p) <- rownames(snp.d)
-         rownames(snp.gt.p)[c(1, 3)] <- c("BB_probs", "AA_probs")
+			aa.probs <- freqs[, 1]^2
+			bb.probs <- freqs[, 2]^2
+			het.probs <- 1 - (aa.probs + bb.probs)
 
-         na.ix <- apply(is.na(snp.gt.p), 2, sum) > 0
+			snp.gt.p <- rbind(bb.probs, het.probs / 2, aa.probs, het.probs / 2)
+			colnames(snp.gt.p) <- rownames(snp.d)
+			rownames(snp.gt.p)[c(1, 3)] <- c("BB_probs", "AA_probs")
 
-         snp.gt.p[, na.ix] <- apply(snp.gt.p, 1, mean, na.rm=TRUE)
-         snp.gt.p <- t(snp.gt.p)
-      }
-   }
+			na.ix <- apply(is.na(snp.gt.p), 2, sum) > 0
 
-   snp.d[, 1] <- as.character(snp.d[, 1])
+			snp.gt.p[, na.ix] <- apply(snp.gt.p, 1, mean, na.rm=TRUE)
+			snp.gt.p <- t(snp.gt.p)
+		}
+	}
+
+	snp.d[, "Chromosome"] <- as.character(snp.d[, "Chromosome"])
+	snp.d[, "Chromosome"] <- gsub("Y", "24", gsub("X", "23", snp.d[, "Chromosome"]))
 
 
-   ## Then process CN probes
+	## Then process CN probes
 
-   ## remove CNs with NAs
+	## remove CNs with NAs
 
-   sna <- apply(is.na(cn.d), 1, sum)
-   cn.d <- cn.d[sna == 0, , drop=F]
+	sna <- apply(is.na(cn.d), 1, sum)
+	cn.d <- cn.d[sna == 0, , drop=F]
 
-   cn.d <- cn.d[intersect(rownames(snp.annot), rownames(cn.d)), , drop=F]
-   cn.d <- cbind(snp.annot[rownames(cn.d), ], cn.d)
-   cn.d[["Chromosome"]] <- as.character(cn.d[["Chromosome"]])
+	cn.d <- cn.d[intersect(rownames(snp.annot), rownames(cn.d)), , drop=F]
+	cn.d <- cbind(snp.annot[rownames(cn.d), ], cn.d)
+	cn.d[["Chromosome"]] <- as.character(cn.d[["Chromosome"]])
+	cn.d[, "Chromosome"] <- gsub("Y", "24", gsub("X", "23", cn.d[, "Chromosome"]))
 
-   ## Using all probe evidence, split into segments.
-   ## Now, small segments will only be dropped if the sum of all probes types in
-   ## a given segment is less than the minimum allowed number of probes.
 
-   h.seg.dat <- GetAsSegs(glad.mat, snp.d, cn.d, capseg.d, germline.hets, snp.gt.p, dbSNP.annot, impute.gt, verbose=verbose)
+	## Using all probe evidence, split into segments.
+	## Now, small segments will only be dropped if the sum of all probes types in
+	## a given segment is less than the minimum allowed number of probes.
 
-   return(list(h.seg.dat=h.seg.dat, mn.sample=mn.sample, found.matched.normal=found.matched.normal))
+	h.seg.dat <- GetAsSegs(glad.mat, snp.d, cn.d, capseg.d, germline.hets, snp.gt.p, dbSNP.annot, impute.gt, verbose=verbose)
+
+	return(list(h.seg.dat=h.seg.dat, mn.sample=mn.sample, found.matched.normal=found.matched.normal))
+
 }
 
 GetArrayAlleleSegData <- function(snp.d, cn.d, snp.annot, glad.mat, snp.freqs,
-      use.pop, use.normal, normal,
-      bad.snps, dbSNP.annot, impute.gt,
-      mn.calls.fn, mn.sample, verbose=FALSE) {
 
-   ## First process SNP probes
+		use.pop, use.normal, normal,
+		bad.snps, dbSNP.annot, impute.gt,
+		mn.calls.fn, mn.sample, verbose=FALSE) {
 
-   ## remove SNPs with NAs
-   sna <- apply(is.na(snp.d), 1, sum)
-   snp.d <- snp.d[sna == 0, ]
+	## First process SNP probes
 
-   snp.d <- snp.d[intersect(rownames(snp.annot), rownames(snp.d)), ]
-   snp.d <- cbind(snp.annot[rownames(snp.d), ], snp.d)
+	## remove SNPs with NAs
+	sna <- apply(is.na(snp.d), 1, sum)
+	snp.d <- snp.d[sna == 0, ]
 
-   ## remove 'Bad' SNPs
-   if (!is.na(bad.snps)) {
-      bad <- which(rownames(snp.d) %in% bad.snps)
-      snp.d <- snp.d[-bad, ]
-      if (verbose) {
-         print(paste("Removing ", sum(bad), " \'bad\' SNPs", sep=""))
-      }
-   }
+	snp.d <- snp.d[intersect(rownames(snp.annot), rownames(snp.d)), ]
+	snp.d <- cbind(snp.annot[rownames(snp.d), ], snp.d)
 
-   ## check for matched-normal sample
-   found.matched.normal <- FALSE
-   mn.calls <- NULL
+	## remove 'Bad' SNPs
+	if (!is.na(bad.snps)) {
+		bad <- which(rownames(snp.d) %in% bad.snps)
+		snp.d <- snp.d[-bad, ]
+		if (verbose) {
+			print(paste("Removing ", sum(bad), " \'bad\' SNPs", sep=""))
+		}
+	}
 
-   ## read matched-norm GT calls
-   ## These days mn.sample should only be passed in as a string or NULL,
-   ## but historically it was NA or even "NA" so catch these cases just
-   ## in case old scripts are used
-   if (!normal && use.normal && (!is.null(mn.sample)) &&
-         (!is.na(mn.sample)) && (mn.sample != "NA")) {
-      if (is.null(mn.calls.fn)) {
-         stop("Matched normal sample specified, but no calls file provided")
-      }
-      if (verbose) {
-         print("reading column data")
-      }
-      mn.calls <- ReadCol(mn.calls.fn, mn.sample, save.rownames=TRUE)
-   }
+	## check for matched-normal sample
+	found.matched.normal <- FALSE
+	mn.calls <- NULL
 
-   if (verbose) {
-      print(summary(mn.calls))
-   }
+	## read matched-norm GT calls
+	## These days mn.sample should only be passed in as a string or NULL,
+	## but historically it was NA or even "NA" so catch these cases just
+	## in case old scripts are used
+	if (!normal && use.normal && (!is.null(mn.sample)) &&
+			(!is.na(mn.sample)) && (mn.sample != "NA")) {
+		if (is.null(mn.calls.fn)) {
+			stop("Matched normal sample specified, but no calls file provided")
+		}
+		if (verbose) {
+			print("reading column data")
+		}
+		mn.calls <- ReadCol(mn.calls.fn, mn.sample, save.rownames=TRUE)
+	}
 
-   if (use.normal && (!is.null(mn.calls))) {
-      found.matched.normal <- TRUE
+	if (verbose) {
+		print(summary(mn.calls))
+	}
 
-      mn.calls <- mn.calls[rownames(snp.d), ]
-      snp.gt.p <- matrix(0, nrow=4, ncol=length(mn.calls), byrow=TRUE)
-      snp.gt.p[, mn.calls == 1] <- c(0.015, 0.985, 0.015, 0.985) / 2
-      snp.gt.p[, mn.calls == 0] <- c(0.005, 0.005, 0.985, 0.005)
-      snp.gt.p[, mn.calls == 2] <- c(0.985, 0.005, 0.005, 0.005)
-      snp.gt.p[, mn.calls == -1] <- c(0.39, 0.11, 0.39, 0.11)
+	if (use.normal && (!is.null(mn.calls))) {
+		found.matched.normal <- TRUE
 
-      snp.gt.p <- t(snp.gt.p)
+		mn.calls <- mn.calls[rownames(snp.d), ]
+		snp.gt.p <- matrix(0, nrow=4, ncol=length(mn.calls), byrow=TRUE)
+		snp.gt.p[, mn.calls == 1] <- c(0.015, 0.985, 0.015, 0.985) / 2
+		snp.gt.p[, mn.calls == 0] <- c(0.005, 0.005, 0.985, 0.005)
+		snp.gt.p[, mn.calls == 2] <- c(0.985, 0.005, 0.005, 0.005)
+		snp.gt.p[, mn.calls == -1] <- c(0.39, 0.11, 0.39, 0.11)
 
-      if (verbose) {
-         n.het <- sum(mn.calls == 1)
-         print(paste("Normal ", round(n.het / length(mn.calls) * 100, 2), "% Het",
-                     sep=""))
-      }
-   } else {
-      if (is.na(use.pop) || use.pop == "NA") {
-         if (verbose) {
-            print("Using Null pop.")
-         }
-         snp.gt.p <- matrix(c(0.39, 0.11, 0.39, 0.11), nrow=nrow(snp.d), ncol=4,
-               byrow=TRUE)
-      } else {
-         if (verbose) {
-            print(paste( "Using population allele-frequency data for: ",
-                        use.pop, sep=""))
-         }
-         ## lookup population allele-frequencies
-         pop.cols <- c(paste(use.pop, "_A",sep=""),  paste(use.pop, "_B", sep=""))
+		snp.gt.p <- t(snp.gt.p)
 
-         ## match SNP names
-         snp.freqs <- snp.freqs[intersect(rownames(snp.d), rownames(snp.freqs)), ]
+		if (verbose) {
+			n.het <- sum(mn.calls == 1)
+			print(paste("Normal ", round(n.het / length(mn.calls) * 100, 2), "% Het",
+							sep=""))
+		}
+	} else {
+		if (is.na(use.pop) || use.pop == "NA") {
+			if (verbose) {
+				print("Using Null pop.")
+			}
+			snp.gt.p <- matrix(c(0.39, 0.11, 0.39, 0.11), nrow=nrow(snp.d), ncol=4,
+					byrow=TRUE)
+		} else {
+			if (verbose) {
+				print(paste( "Using population allele-frequency data for: ",
+								use.pop, sep=""))
+			}
+			## lookup population allele-frequencies
+			pop.cols <- c(paste(use.pop, "_A",sep=""),  paste(use.pop, "_B", sep=""))
 
-         ## pseduo-count
-         freqs <- snp.freqs[, pop.cols] + 0.01
-         freqs <- freqs / rowSums(freqs)
+			## match SNP names
+			snp.freqs <- snp.freqs[intersect(rownames(snp.d), rownames(snp.freqs)), ]
 
-         aa.probs <- freqs[, 1]^2
-         bb.probs <- freqs[, 2]^2
-         het.probs <- 1 - (aa.probs + bb.probs)
+			## pseduo-count
+			freqs <- snp.freqs[, pop.cols] + 0.01
+			freqs <- freqs / rowSums(freqs)
 
-         snp.gt.p <- rbind(bb.probs, het.probs / 2, aa.probs, het.probs / 2)
-         colnames(snp.gt.p) <- rownames(snp.d)
-         rownames(snp.gt.p)[c(1, 3)] <- c("BB_probs", "AA_probs")
+			aa.probs <- freqs[, 1]^2
+			bb.probs <- freqs[, 2]^2
+			het.probs <- 1 - (aa.probs + bb.probs)
 
-         na.ix <- apply(is.na(snp.gt.p), 2, sum) > 0
+			snp.gt.p <- rbind(bb.probs, het.probs / 2, aa.probs, het.probs / 2)
+			colnames(snp.gt.p) <- rownames(snp.d)
+			rownames(snp.gt.p)[c(1, 3)] <- c("BB_probs", "AA_probs")
 
-         snp.gt.p[, na.ix] <- apply(snp.gt.p, 1, mean, na.rm=TRUE)
-         snp.gt.p <- t(snp.gt.p)
-      }
-   }
+			na.ix <- apply(is.na(snp.gt.p), 2, sum) > 0
 
-   snp.d[, 1] <- as.character(snp.d[, 1])
+			snp.gt.p[, na.ix] <- apply(snp.gt.p, 1, mean, na.rm=TRUE)
+			snp.gt.p <- t(snp.gt.p)
+		}
+	}
+
+	snp.d[, 1] <- as.character(snp.d[, 1])
+	snp.d[,1] <- gsub("Y", "24", gsub("X", "23", snp.d[,1]))
+
+	## Then process CN probes
+
+	## remove CNs with NAs
+
+	sna <- apply(is.na(cn.d), 1, sum)
+	cn.d <- cn.d[sna == 0, , drop=F]
+
+	cn.d <- cn.d[intersect(rownames(snp.annot), rownames(cn.d)), , drop=F]
+	cn.d <- cbind(snp.annot[rownames(cn.d), ], cn.d)
+	cn.d[["Chromosome"]] <- as.character(cn.d[["Chromosome"]])
+	cn.d[,1] <- gsub("Y", "24", gsub("X", "23", cn.d[,1]))
 
 
-   ## Then process CN probes
+	## Using all probe evidence, split into segments.
+	## Now, small segments will only be dropped if the sum of all probes types in
+	## a given segment is less than the minimum allowed number of probes.
 
-   ## remove CNs with NAs
+	h.seg.dat <- GetArrayAsSegs(glad.mat, snp.d, cn.d, snp.gt.p, dbSNP.annot, impute.gt, verbose=verbose)
 
-   sna <- apply(is.na(cn.d), 1, sum)
-   cn.d <- cn.d[sna == 0, , drop=F]
+	return(list(h.seg.dat=h.seg.dat, mn.sample=mn.sample, found.matched.normal=found.matched.normal))
 
-   cn.d <- cn.d[intersect(rownames(snp.annot), rownames(cn.d)), , drop=F]
-   cn.d <- cbind(snp.annot[rownames(cn.d), ], cn.d)
-   cn.d[["Chromosome"]] <- as.character(cn.d[["Chromosome"]])
-
-   ## Using all probe evidence, split into segments.
-   ## Now, small segments will only be dropped if the sum of all probes types in
-   ## a given segment is less than the minimum allowed number of probes.
-
-   h.seg.dat <- GetArrayAsSegs(glad.mat, snp.d, cn.d, snp.gt.p, dbSNP.annot, impute.gt, verbose=verbose)
-
-   return(list(h.seg.dat=h.seg.dat, mn.sample=mn.sample, found.matched.normal=found.matched.normal))
 }
 
 
@@ -412,193 +421,203 @@ GetAsSegs <- function(glad.mat, snp.d, cn.d, capseg.d, germline.hets, snp.gt.p, 
    h.snp.annot = lapply(snp.res, "[[", "h.snp.annot")
 
 
-   # CN Probes
-   # for (i in 1:n.seg) {
-   cn.res = foreach(i = 1:n.seg) %dopar% {
-      cn.ix <- GetProbeIx(i, cn.d)
-      raw.cn.seg <- cn.d[cn.ix, "Intensity", drop=FALSE]
-      if (verbose) {
-         print(paste("Processing Segment: ", i, "CN size = ", dim(raw.cn.seg)[1],
-                     "start = ", glad.mat[i, "Start.bp"], "end = ",
-                     glad.mat[i, "End.bp"], "Chromosome = ",
-                     glad.mat[i, "Chromosome"]))
-      }
-      h.cn.d <- t(raw.cn.seg)
-      h.cn.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=cn.d[cn.ix, 2])
-      list(h.cn.d=h.cn.d, h.cn.annot=h.cn.annot)
-   }
-   h.cn.d = lapply(cn.res, "[[", "h.cn.d")
-   h.cn.annot = lapply(cn.res, "[[", "h.cn.annot")
 
-   # Capseg Probes
-   # for (i in 1:n.seg) {
-   capseg.res = foreach(i = 1:n.seg) %dopar% {
-      capseg.ix <- GetProbeIx(i, capseg.d)
-      raw.capseg.seg <- capseg.d[capseg.ix, "Intensity", drop=FALSE]
-      if (verbose) {
-         print(paste("Processing Segment: ", i, "Capseg size = ", dim(raw.capseg.seg)[1],
-                     "start = ", glad.mat[i, "Start.bp"], "end = ",
-                     glad.mat[i, "End.bp"], "Chromosome = ",
-                     glad.mat[i, "Chromosome"]))
-      }
-      h.capseg.d <- t(raw.capseg.seg)
-      h.capseg.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=capseg.d[capseg.ix, 2])
-      list(h.capseg.d=h.capseg.d, h.capseg.annot=h.capseg.annot)
-   }
-   h.capseg.d = lapply(capseg.res, "[[", "h.capseg.d")
-   h.capseg.annot = lapply(capseg.res, "[[", "h.capseg.annot")
+	# CN Probes
+	# for (i in 1:n.seg) {
+	cn.res = foreach(i = 1:n.seg) %dopar% {
+		cn.ix <- GetProbeIx(i, cn.d)
+		raw.cn.seg <- cn.d[cn.ix, "Intensity", drop=FALSE]
+		if (verbose) {
+			print(paste("Processing Segment: ", i, "CN size = ", dim(raw.cn.seg)[1],
+							"start = ", glad.mat[i, "Start.bp"], "end = ",
+							glad.mat[i, "End.bp"], "Chromosome = ",
+							glad.mat[i, "Chromosome"]))
+		}
+		h.cn.d <- t(raw.cn.seg)
+		h.cn.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=cn.d[cn.ix, 2])
+		list(h.cn.d=h.cn.d, h.cn.annot=h.cn.annot)
+	}
+	h.cn.d = lapply(cn.res, "[[", "h.cn.d")
+	h.cn.annot = lapply(cn.res, "[[", "h.cn.annot")
 
-   # Germline Het Allele Counts
-   GetHetIx <- function(i, het.dat) {
-      (het.dat$Chromosome == glad.mat[i, "Chromosome"]) & (het.dat$Start_position >= glad.mat[i, "Start.bp"]) & (het.dat$Start_position <= glad.mat[i, "End.bp"])
-   }
-   gh.res = foreach(i = 1:n.seg) %dopar% {
-      gh.ix <- GetHetIx(i, germline.hets)
-      raw.gh.seg <- germline.hets[gh.ix, c("i_t_ref_count", "i_t_alt_count"), drop=FALSE]
-      rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("Chromosome", "Start_position", "Hugo_Symbol"), drop=FALSE], 1, function(x) paste(trim(x), collapse="_"))
+	# Capseg Probes
+	# for (i in 1:n.seg) {
+	capseg.res = foreach(i = 1:n.seg) %dopar% {
+		capseg.ix <- GetProbeIx(i, capseg.d)
+		raw.capseg.seg <- capseg.d[capseg.ix, "Intensity", drop=FALSE]
+		if (verbose) {
+			print(paste("Processing Segment: ", i, "Capseg size = ", dim(raw.capseg.seg)[1],
+							"start = ", glad.mat[i, "Start.bp"], "end = ",
+							glad.mat[i, "End.bp"], "Chromosome = ",
+							glad.mat[i, "Chromosome"]))
+		}
+		h.capseg.d <- t(raw.capseg.seg)
+		h.capseg.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=capseg.d[capseg.ix, 2])
+		list(h.capseg.d=h.capseg.d, h.capseg.annot=h.capseg.annot)
+	}
+	h.capseg.d = lapply(capseg.res, "[[", "h.capseg.d")
+	h.capseg.annot = lapply(capseg.res, "[[", "h.capseg.annot")
 
-      if (verbose) {
-         print(paste("Processing Segment: ", i, "Germline Het size = ", dim(raw.gh.seg)[1],
-                     "start = ", glad.mat[i, "Start.bp"], "end = ",
-                     glad.mat[i, "End.bp"], "Chromosome = ",
-                     glad.mat[i, "Chromosome"], ifelse(dim(raw.gh.seg)[1]==0, ": No HETS", "")))
-      }
-      gh.wes.allele.d <- t(raw.gh.seg)
-      gh.wes.allele.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=germline.hets$Start_position[gh.ix], hugo.symbol=germline.hets$Hugo_Symbol[gh.ix],
-            ref.allele=germline.hets$Reference_Allele[gh.ix], alt.allele=germline.hets$Tumor_Seq_Allele1[gh.ix], dbSNP=germline.hets$dbSNP[gh.ix])
-      list(gh.wes.allele.d=gh.wes.allele.d, gh.wes.allele.annot=gh.wes.allele.annot)
-   }
-   gh.wes.allele.d = lapply(gh.res, "[[", "gh.wes.allele.d")
-   gh.wes.allele.annot = lapply(gh.res, "[[", "gh.wes.allele.annot")
+	# Germline Het Allele Counts
+	GetHetIx <- function(i, het.dat) {
+		(het.dat$Chromosome == glad.mat[i, "Chromosome"]) & (het.dat$Start_position >= glad.mat[i, "Start.bp"]) & (het.dat$Start_position <= glad.mat[i, "End.bp"])
+	}
+	gh.res = foreach(i = 1:n.seg) %dopar% {
+		gh.ix <- GetHetIx(i, germline.hets)
+		raw.gh.seg <- germline.hets[gh.ix, c("i_t_ref_count", "i_t_alt_count"), drop=FALSE]
+		# change ref and alt names
+		colnames(raw.gh.seg) <- c("ref", "alt")
 
-   return(list(h.snp.d=h.snp.d, h.cn.d=h.cn.d, h.capseg.d=h.capseg.d, h.snp.gt.p=h.snp.gt.p, h.snp.annot=h.snp.annot,
-            h.cn.annot=h.cn.annot, h.capseg.annot=h.capseg.annot,  gh.wes.allele.d=gh.wes.allele.d, gh.wes.allele.annot=gh.wes.allele.annot))
+		rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("Chromosome", "Start_position", "Hugo_Symbol"), drop=FALSE], 1, function(x) paste(gsub("^\\s+", "", gsub("\\s+$", "", x)), collapse="_"))
+
+
+		if (verbose) {
+			print(paste("Processing Segment: ", i, "Germline Het size = ", dim(raw.gh.seg)[1],
+							"start = ", glad.mat[i, "Start.bp"], "end = ",
+							glad.mat[i, "End.bp"], "Chromosome = ",
+							glad.mat[i, "Chromosome"], ifelse(dim(raw.gh.seg)[1]==0, ": No HETS", "")))
+		}
+		gh.wes.allele.d <- t(raw.gh.seg)
+		gh.wes.allele.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=germline.hets$Start_position[gh.ix], hugo.symbol=germline.hets$Hugo_Symbol[gh.ix],
+				ref.allele=germline.hets$Reference_Allele[gh.ix], alt.allele=germline.hets$Tumor_Seq_Allele1[gh.ix], dbSNP=germline.hets$dbSNP[gh.ix])
+		list(gh.wes.allele.d=gh.wes.allele.d, gh.wes.allele.annot=gh.wes.allele.annot)
+	}
+	gh.wes.allele.d = lapply(gh.res, "[[", "gh.wes.allele.d")
+	gh.wes.allele.annot = lapply(gh.res, "[[", "gh.wes.allele.annot")
+
+	return(list(h.snp.d=h.snp.d, h.cn.d=h.cn.d, h.capseg.d=h.capseg.d, h.snp.gt.p=h.snp.gt.p, h.snp.annot=h.snp.annot,
+				h.cn.annot=h.cn.annot, h.capseg.annot=h.capseg.annot,  gh.wes.allele.d=gh.wes.allele.d, gh.wes.allele.annot=gh.wes.allele.annot))
+
 }
 
 GetCaptureAsSegs <- function(glad.mat, capseg.d, germline.hets, verbose=FALSE) {
-   GetProbeIx <- function(i, probe.dat) {
-      (probe.dat[, 1] == glad.mat[i, "Chromosome"]) &
-               ((probe.dat[, 2] >= glad.mat[i, "Start.bp"]) &
-               (probe.dat[, 2] <= glad.mat[i, "End.bp"]))
-   }
 
-   if (verbose) {
-      print(paste("GetCaptureAsSegs .... processing", nrow(glad.mat), "segments"))
-   }
-   ##  check number of total probes in each segment
-   n.seg <- nrow(glad.mat)
-   n.capseg.probes <- foreach(i = 1:n.seg, .combine=c) %dopar% {
-      sum(GetProbeIx(i, capseg.d))
-   }
+	GetProbeIx <- function(i, probe.dat) {
+		(probe.dat[, 1] == glad.mat[i, "Chromosome"]) &
+					((probe.dat[, 2] >= glad.mat[i, "Start.bp"]) &
+					(probe.dat[, 2] <= glad.mat[i, "End.bp"]))
+	}
 
-   # too.small.ix = n.snp.probes + n.cn.probes + n.capseg.probes > 2
-   # glad.mat <- glad.mat[, ]
+	if (verbose) {
+		print(paste("GetCaptureAsSegs .... processing", nrow(glad.mat), "segments"))
+	}
+	##  check number of total probes in each segment
+	n.seg <- nrow(glad.mat)
+	n.capseg.probes <- foreach(i = 1:n.seg, .combine=c) %dopar% {
+		sum(GetProbeIx(i, capseg.d))
+	}
 
-   n.seg <- nrow(glad.mat)
+	# too.small.ix = n.snp.probes + n.cn.probes + n.capseg.probes > 2
+	# glad.mat <- glad.mat[, ]
 
-   if (verbose) {
-      print(paste("GetCaptureAsSegs n.seg = ",n.seg))
-   }
+	n.seg <- nrow(glad.mat)
 
-   capseg.res = foreach(i = 1:n.seg) %dopar% {
-      capseg.ix <- GetProbeIx(i, capseg.d)
-      raw.capseg.seg <- capseg.d[capseg.ix, "Intensity", drop=FALSE]
-      if (verbose) {
-         print(paste("Processing Segment: ", i, "Capseg size = ", dim(raw.capseg.seg)[1],
-                     "start = ", glad.mat[i, "Start.bp"], "end = ",
-                     glad.mat[i, "End.bp"], "Chromosome = ",
-                     glad.mat[i, "Chromosome"]))
-      }
-      h.capseg.d <- t(raw.capseg.seg)
-      h.capseg.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=capseg.d[capseg.ix, 2])
-      list(h.capseg.d=h.capseg.d, h.capseg.annot=h.capseg.annot)
-   }
-   h.capseg.d = lapply(capseg.res, "[[", "h.capseg.d")
-   h.capseg.annot = lapply(capseg.res, "[[", "h.capseg.annot")
+	if (verbose) {
+		print(paste("GetCaptureAsSegs n.seg = ",n.seg))
+	}
 
-   # Germline Het Allele Counts
-   GetHetIx <- function(i, het.dat) {
-      (het.dat$contig == glad.mat[i, "Chromosome"]) & (het.dat$position >= glad.mat[i, "Start.bp"]) & (het.dat$position <= glad.mat[i, "End.bp"])
-   }
-   print("TEST")
-   print(summary(germline.hets))
-   gh.res = foreach(i = 1:n.seg) %dopar% {
-      gh.ix <- GetHetIx(i, germline.hets)
-      raw.gh.seg <- germline.hets[gh.ix, c("A", "B"), drop=FALSE]
-      colnames(raw.gh.seg) = c("ref", "alt")
-      rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("contig", "position"), drop=FALSE], 1, function(x) paste(trim(x), collapse="_"))
+	capseg.res = foreach(i = 1:n.seg) %dopar% {
+		capseg.ix <- GetProbeIx(i, capseg.d)
+		raw.capseg.seg <- capseg.d[capseg.ix, "Intensity", drop=FALSE]
+		if (verbose) {
+			print(paste("Processing Segment: ", i, "Capseg size = ", dim(raw.capseg.seg)[1],
+							"start = ", glad.mat[i, "Start.bp"], "end = ",
+							glad.mat[i, "End.bp"], "Chromosome = ",
+							glad.mat[i, "Chromosome"]))
+		}
+		h.capseg.d <- t(raw.capseg.seg)
+		h.capseg.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=capseg.d[capseg.ix, 2])
+		list(h.capseg.d=h.capseg.d, h.capseg.annot=h.capseg.annot)
+	}
+	h.capseg.d = lapply(capseg.res, "[[", "h.capseg.d")
+	h.capseg.annot = lapply(capseg.res, "[[", "h.capseg.annot")
 
-      if (verbose) {
-         print(paste("Processing Segment: ", i, "Germline Het size = ", dim(raw.gh.seg)[1],
-                     "start = ", glad.mat[i, "Start.bp"], "end = ",
-                     glad.mat[i, "End.bp"], "Chromosome = ",
-                     glad.mat[i, "Chromosome"], ifelse(dim(raw.gh.seg)[1]==0, ": No HETS", "")))
-      }
-      gh.wes.allele.d <- t(raw.gh.seg)
-      gh.wes.allele.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=germline.hets$position[gh.ix], hugo.symbol="UNKNOWN",#germline.hets$Hugo_Symbol[gh.ix],
-            ref.allele=germline.hets$aBase[gh.ix], alt.allele=germline.hets$bBase[gh.ix], dbSNP=germline.hets$dbSNPOrientation[gh.ix])
-      list(gh.wes.allele.d=gh.wes.allele.d, gh.wes.allele.annot=gh.wes.allele.annot)
-   }
-   gh.wes.allele.d = lapply(gh.res, "[[", "gh.wes.allele.d")
-   gh.wes.allele.annot = lapply(gh.res, "[[", "gh.wes.allele.annot")
+	# Germline Het Allele Counts
+	GetHetIx <- function(i, het.dat) {
+		(het.dat$Chromosome == glad.mat[i, "Chromosome"]) & (het.dat$Start_position >= glad.mat[i, "Start.bp"]) & (het.dat$Start_position <= glad.mat[i, "End.bp"])
+	}
+	gh.res = foreach(i = 1:n.seg) %dopar% {
+		gh.ix <- GetHetIx(i, germline.hets)
+		raw.gh.seg <- germline.hets[gh.ix, c("i_t_ref_count", "i_t_alt_count"), drop=FALSE]
+		colnames(raw.gh.seg) <- c("ref", "alt")
 
-   return(list(h.capseg.d=h.capseg.d, h.capseg.annot=h.capseg.annot,  gh.wes.allele.d=gh.wes.allele.d, gh.wes.allele.annot=gh.wes.allele.annot))
+		rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("Chromosome", "Start_position"), drop=FALSE], 1, function(x) paste(gsub("^\\s+", "", gsub("\\s+$", "", x)), collapse="_"))
+
+		if (verbose) {
+			print(paste("Processing Segment: ", i, "Germline Het size = ", dim(raw.gh.seg)[1],
+							"start = ", glad.mat[i, "Start.bp"], "end = ",
+							glad.mat[i, "End.bp"], "Chromosome = ",
+							glad.mat[i, "Chromosome"], ifelse(dim(raw.gh.seg)[1]==0, ": No HETS", "")))
+		}
+		gh.wes.allele.d <- t(raw.gh.seg)
+		gh.wes.allele.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=germline.hets$Start_position[gh.ix], hugo.symbol=germline.hets$Hugo_Symbol[gh.ix],
+				ref.allele=germline.hets$Reference_Allele[gh.ix], alt.allele=germline.hets$Tumor_Seq_Allele1[gh.ix], dbSNP=germline.hets$dbSNP[gh.ix])
+		list(gh.wes.allele.d=gh.wes.allele.d, gh.wes.allele.annot=gh.wes.allele.annot)
+	}
+	gh.wes.allele.d = lapply(gh.res, "[[", "gh.wes.allele.d")
+	gh.wes.allele.annot = lapply(gh.res, "[[", "gh.wes.allele.annot")
+
+	return(list(h.capseg.d=h.capseg.d, h.capseg.annot=h.capseg.annot,  gh.wes.allele.d=gh.wes.allele.d, gh.wes.allele.annot=gh.wes.allele.annot))
+
 }
 
 GetArrayAsSegs <- function(glad.mat, snp.d, cn.d, snp.gt.p, dbSNP.annot, impute.gt, verbose=FALSE) {
-   GetProbeIx <- function(i, probe.dat) {
-      (probe.dat[, 1] == glad.mat[i, "Chromosome"]) &
-               ((probe.dat[, 2] >= glad.mat[i, "Start.bp"]) &
-               (probe.dat[, 2] <= glad.mat[i, "End.bp"]))
-   }
 
-   if (verbose) {
-      print(paste("GetArrayAsSegs .... processing", nrow(glad.mat), "segments"))
-   }
-   ##  check number of total probes in each segment
-   n.seg <- nrow(glad.mat)
-   n.snp.probes <- foreach(i = 1:n.seg, .combine=c) %dopar% {
-      sum(GetProbeIx(i, snp.d))
-   }
-   n.cn.probes <- foreach(i = 1:n.seg, .combine=c) %dopar% {
-      sum(GetProbeIx(i, cn.d))
-   }
+	GetProbeIx <- function(i, probe.dat) {
+		if (any(c("X", "Y") %in% probe.dat[,1])) stop("One of the probe-level datasets was not parsed correctly.  It still contains X or Y instead of 23 or 24")
+		(probe.dat[, 1] == glad.mat[i, "Chromosome"]) &
+		((probe.dat[, 2] >= glad.mat[i, "Start.bp"]) &
+		(probe.dat[, 2] <= glad.mat[i, "End.bp"]))
+	}
 
-   if (verbose) {
-      print(paste(nrow(glad.mat), " segs with > 2 SNPs and > 2 CN probes", sep=""))
-   }
-   n.seg <- nrow(glad.mat)
+	if (verbose) {
+		print(paste("GetArrayAsSegs .... processing", nrow(glad.mat), "segments"))
+	}
+	##  check number of total probes in each segment
+	n.seg <- nrow(glad.mat)
+	n.snp.probes <- foreach(i = 1:n.seg, .combine=c) %dopar% {
+		sum(GetProbeIx(i, snp.d))
+	}
+	n.cn.probes <- foreach(i = 1:n.seg, .combine=c) %dopar% {
+		sum(GetProbeIx(i, cn.d))
+	}
 
-   if (verbose) {
-      print(paste("get_AS_segs_ n.seg = ",n.seg))
-   }
+	if (verbose) {
+		print(paste(nrow(glad.mat), " segs with > 2 SNPs and > 2 CN probes", sep=""))
+	}
+	n.seg <- nrow(glad.mat)
+
+	if (verbose) {
+		print(paste("get_AS_segs_ n.seg = ",n.seg))
+	}
 
 
-   snp.res = foreach(i = 1:n.seg) %dopar% {
-      snp.ix <- GetProbeIx(i, snp.d)
-      raw.snp.seg <- snp.d[snp.ix, c(3, 4), drop=FALSE]
-      if (verbose) {
-         print(paste("Processing Segment: ", i, "SNP size = ", dim(raw.snp.seg)[1],
-                     "start = ", glad.mat[i, "Start.bp"], "end = ",
-                     glad.mat[i, "End.bp"], "Chromosome = ",
-                     glad.mat[i, "Chromosome"]))
-      }
+	snp.res = foreach(i = 1:n.seg) %dopar% {
+		snp.ix <- GetProbeIx(i, snp.d)
+		raw.snp.seg <- snp.d[snp.ix, c(3, 4), drop=FALSE]
+		if (verbose) {
+			print(paste("Processing Segment: ", i, "SNP size = ", dim(raw.snp.seg)[1],
+							"start = ", glad.mat[i, "Start.bp"], "end = ",
+							glad.mat[i, "End.bp"], "Chromosome = ",
+							glad.mat[i, "Chromosome"]))
+		}
 
-      h.snp.gt.p <- snp.gt.p[snp.ix, , drop=FALSE]
-      rownames(h.snp.gt.p) <- rownames(snp.d)[snp.ix]
+		h.snp.gt.p <- snp.gt.p[snp.ix, , drop=FALSE]
+		rownames(h.snp.gt.p) <- rownames(snp.d)[snp.ix]
 
-      h.snp.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=snp.d[snp.ix, 2])
+		h.snp.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=snp.d[snp.ix, 2])
 
-      if (impute.gt) {
-         dbSNP.ix <- match(rownames(snp.d)[snp.ix], rownames(dbSNP.annot))
-         h.snp.annot[["dbSNP"]] <- dbSNP.annot[dbSNP.ix, , drop=FALSE]
-      }
+		if (impute.gt) {
+			dbSNP.ix <- match(rownames(snp.d)[snp.ix], rownames(dbSNP.annot))
+			h.snp.annot[["dbSNP"]] <- dbSNP.annot[dbSNP.ix, , drop=FALSE]
+		}
 
-      list(h.snp.d=t(raw.snp.seg), h.snp.gt.p=h.snp.gt.p, h.snp.annot=h.snp.annot)
-   }
-   h.snp.d = lapply(snp.res, "[[", "h.snp.d")
-   h.snp.gt.p = lapply(snp.res, "[[", "h.snp.gt.p")
-   h.snp.annot = lapply(snp.res, "[[", "h.snp.annot")
+		list(h.snp.d=t(raw.snp.seg), h.snp.gt.p=h.snp.gt.p, h.snp.annot=h.snp.annot)
+	}
+	h.snp.d = lapply(snp.res, "[[", "h.snp.d")
+	h.snp.gt.p = lapply(snp.res, "[[", "h.snp.gt.p")
+	h.snp.annot = lapply(snp.res, "[[", "h.snp.annot")
+
 
 
    # CN Probes

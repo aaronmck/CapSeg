@@ -16,20 +16,21 @@
 ## Bryan's
 ########################################
 
-## Plot SNP Model Segfit
-PlotSnpSegfit <- function(i, res, min=NULL, max=NULL,  plot=T) {
+PlotSnpSegfit <- function(i, res, min=NULL, max=NULL,  plot=TRUE) {
 
-# i = 1
-# res = iams.res
-# plot=T
+   # i = 1
+   # res = tot.res
+   # plot = FALSE
+   # min <- -0.5
+   # max <- 4.5
    
    h.snp.d = res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i]]
    h.snp.gt.p = res[["as.res"]][["h.seg.dat"]][["h.snp.gt.p"]][[i]]
    h.probe.annot = res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i]]
-   delta.tau = res[["em.fit"]][["delta.tau"]][i, ]
-   mu = GetMeans(delta.tau[1], delta.tau[2])
-   theta = res[["em.fit"]][["theta"]]
-   array.name = basename(results.dir)
+   delta.tau = res[["array.em.fit"]][["delta.tau"]][i, ]
+   mu = AffyGetMeans(delta.tau[1], delta.tau[2])
+   theta = res[["array.em.fit"]][["theta"]]
+   array.name = basename(RESULTS.DIR)
    
    if (ncol(h.snp.d) == 0) {
       if (plot) {
@@ -66,7 +67,7 @@ PlotSnpSegfit <- function(i, res, min=NULL, max=NULL,  plot=T) {
    
    d.snp = h.snp.d - theta[["bg"]]
    snp.gt.p = h.snp.gt.p
-   atten.mu = Atten(mu, theta[["at"]])
+   atten.mu = AffyAtten(mu, theta[["at"]])
    
    
    sigma.epsilon <- theta[["sigma.epsilon"]]
@@ -83,14 +84,13 @@ PlotSnpSegfit <- function(i, res, min=NULL, max=NULL,  plot=T) {
    
    
    
-# df.snp <- d.snp[((d.snp >= min) & (d.snp < max))]
-   df.snp = d.snp
+
+   df.snp <- d.snp
    df.snp[1,] <- pmin(max, pmax(min, d.snp[1,]))
    df.snp[2,] <- pmin(max, pmax(min, d.snp[2,]))
    
    if (plot) {
       hist(df.snp, breaks=seq(from=min, to=max, length.out=100), freq=FALSE, main="", xlab="Allelic copy-ratio", xlim=c(min, max))
-#    hist(HTx(df.snp, sigma.epsilon, sigma.eta), breaks=100, freq=FALSE, main="", xlab="Allelic copy-ratio", xlim=c(min, max))
    }
    
    xgl <- 1001
@@ -125,13 +125,8 @@ PlotSnpSegfit <- function(i, res, min=NULL, max=NULL,  plot=T) {
 
 PlotCnSegfit <- function(i, res, min=NULL, max=NULL, plot=T) {
    
-# i = 30
-# res = iams.res
-# plot=T
-
-   
    h.cn.d = res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i]]
-   array.name = basename(results.dir)
+   array.name = basename(RESULTS.DIR)
    
    if (length(h.cn.d) == 0) {
       if (plot) {
@@ -149,8 +144,8 @@ PlotCnSegfit <- function(i, res, min=NULL, max=NULL, plot=T) {
       max = intensity.lim[2]
    }
    
-   theta = res[["em.fit"]][["theta"]]
-   tau = res[["em.fit"]][["delta.tau"]][i, 2]
+   theta = res[["array.em.fit"]][["theta"]]
+   tau = res[["array.em.fit"]][["delta.tau"]][i, 2]
    
    if (is.null(tau)) {
       df.cn <- pmax(min, pmin(max, h.cn.d))
@@ -193,51 +188,73 @@ PlotCnSegfit <- function(i, res, min=NULL, max=NULL, plot=T) {
 }
 
 
-PlotSnpIntensities <- function(i, res, genomic.limits, intensity.lim, bgl.gt.p=NULL, subtitle="")   {
-
-# res = iams.res
-# i = 9
-# bgl.gt.p = NA
-# subtitle="test"
-# genomic.limits = range(c(res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i+1]][['pos']],
-#             res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i+1]][['pos']],
-#             res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][['pos']]))
-# genomic.limits = genomic.limits / 1e6 
-# ScarterPar()
-# probe.type = "snp"
-# all.d = list()
-# all.d[["snp"]] = c(colSums(iams.res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i]]), colSums(iams.res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i+1]]))
-# all.d[["cn"]] = c(iams.res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i]], iams.res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i+1]])
-# all.d[["capseg"]] = c(iams.res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i]], iams.res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i+1]])
-# medians = lapply(all.d, median )
-# if (!is.na(medians[[probe.type]]) ) {
-#    other.probe.types = setdiff(names(all.d), probe.type)
-#    d1 = abs(medians[[probe.type]] - medians[[other.probe.types[1] ]])
-#    d2 = abs(medians[[probe.type]] - medians[[other.probe.types[2] ]])
-#    if ( max(c(d1, d2)) > 30 | is.na(max(c(d1, d2))) ) {
-#       quant = quantile(all.d[[probe.type]], probs=seq(from=.01, 1, length.out=100))
-#       intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
-#    } else {
-#       quant = quantile(c(all.d[["snp"]], all.d[["cn"]], all.d[["capseg"]]), probs=seq(from=.01, 1, length.out=100))
-#       intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
-#    }
-#    if (intensity.lim[2] - intensity.lim[1] < 5 ) intensity.lim = c(mean(intensity.lim) - 2.5, mean(intensity.lim) + 2.5)
-# }  else {
-#    plot(1, type="n", xlab="Genomic Position", ylab="Copy Ratio", xlim=genomic.limits, main="")
-#    return()
-#    
-# }
+PlotCapsegSegfitBryan <- function(i, res, min=NULL, max=NULL, plot=T) {
    
+   # i = 1
+   # res = tot.res
+   # plot = TRUE
+   # min=NULL; max=NULL
+   
+   h.d = res[['as.res']][["h.seg.dat"]][["h.capseg.d"]][[i]]
+   tau = res[['capture.em.fit']][["delta.tau"]][i, 2]
+   theta = res[['capture.em.fit']][["Theta"]]
+   
+   if (length(h.d) == 0) {
+      if (plot) {
+         plot(1, type="n")
+      }
+      return(h.d)
+   }
+   
+   if (is.null(min) & is.null(max)) {
+      quant = quantile(h.d, probs=seq(from=.01, 1, length.out=100))
+      intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
+      
+      if (intensity.lim[2] - intensity.lim[1] < 5 ) intensity.lim = c(mean(intensity.lim) - 2.5, mean(intensity.lim) + 2.5)
+      
+      min = intensity.lim[1]
+      max = intensity.lim[2]
+   }
+   
+   if (plot) {
+      if (length(h.d) > 0) {
+         df <- pmax(min, pmin(max, h.d))
+         hist(df, breaks=seq(from=min, to=max, length.out=100), freq=FALSE, main="", xlab="Capseg Probe Intensity", xlim=c(min, max))
+      } else {
+         plot(1, type="n", main="", xlab="Capseg Probe Intensity", xlim=c(min, max))
+      }
+      
+      if(!is.null(tau)) {
+         xgl = 1001
+         x <- seq(min, max, length.out=xgl)   
+         y = ExomeDFunc(x, tau, theta)
+         lines(x, y, lwd=2, col="green")
+      }
+   } else {
+      return(df)
+   }
+
+}
+
+PlotSnpIntensities <- function(i, res, genomic.limits, intensity.lim, bgl.gt.p=NULL, subtitle="")   {
+   
+   # i <- 1
+   # res <- tot.res
+   # intensity.lim <- c(-0.5, 4.5)   
+   # bgl.gt.p <- NULL
+   # subtitle <- "subtitle"
+
    ######
+   genomic.limits <- genomic.limits / 1e6
    seg.chr = res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i]][["chr"]]
-   theta = res[["em.fit"]][["theta"]]
-   h.tau = res[["em.fit"]][["e.mu"]]
-   delta.tau = res[["em.fit"]][['delta.tau']]
-   unatten1.mu = GetMeans(delta.tau[i, 1], delta.tau[i, 2])
-   unatten2.mu = GetMeans(delta.tau[i+1, 1], delta.tau[i+1, 2])
+   theta = res[["array.em.fit"]][["theta"]]
+   h.tau = res[["array.em.fit"]][["e.mu"]]
+   delta.tau = res[["array.em.fit"]][['delta.tau']]
+   unatten1.mu = AffyGetMeans(delta.tau[i, 1], delta.tau[i, 2])
+   unatten2.mu = AffyGetMeans(delta.tau[i+1, 1], delta.tau[i+1, 2])
    
    if (is.null(bgl.gt.p)) {
-      clust.p = rbind( res[["em.fit"]][["snp.clust.p"]][[i]], res[["em.fit"]][["snp.clust.p"]][[i+1]]) 
+      clust.p = rbind( res[["array.em.fit"]][["snp.clust.p"]][[i]], res[["array.em.fit"]][["snp.clust.p"]][[i+1]]) 
    } else {
       clust.p = rbind( bgl.gt.p[[i]], bgl.gt.p[[i+1]])
    }
@@ -260,14 +277,14 @@ PlotSnpIntensities <- function(i, res, genomic.limits, intensity.lim, bgl.gt.p=N
    seg12[,1] = pmin(intensity.lim[2], pmax(intensity.lim[1], seg12[,1]))
    seg12[,2] = pmin(intensity.lim[2], pmax(intensity.lim[1], seg12[,2]))
    
-   atten1.mu = Atten(unatten1.mu, theta[['at']])
-   atten2.mu = Atten(unatten2.mu, theta[["at"]])
+   atten1.mu = AffyAtten(unatten1.mu, theta[['at']])
+   atten2.mu = AffyAtten(unatten2.mu, theta[["at"]])
    
    main = ifelse(!is.null(res[["seg.dat"]][["seg.info"]][i,"GC.Content"]), 
             paste("SNP Chr:", seg.chr, "Segments: ", i, "and", i+1, 
                   "\n Seg1 GC: ", round(res[["seg.dat"]][["seg.info"]][i,"GC.Content"], 2), 
                   "Seg2 GC: ", round(res[["seg.dat"]][["seg.info"]][i+1,"GC.Content"], 2)),      
-            paste("SNP Chr:", seg.chr, "Segments: ", i, "and", i+1, "\n", array.name))
+            paste("SNP Chr:", seg.chr, "Segments: ", i, "and", i+1 ))
    
    plot(0, type="n", main=main, xlab="Genomic Position (MB)", ylab="Copy Ratio", ylim = intensity.lim, xlim=genomic.limits)
    mtext(subtitle, cex=.7)
@@ -300,7 +317,7 @@ PlotSnpIntensities <- function(i, res, genomic.limits, intensity.lim, bgl.gt.p=N
    hom.col = "black"
    seg.bp.col = "black"
    #seg 1
-# abline(v=max(pos1), col=seg.bp.col, lty=3)
+   # abline(v=max(pos1), col=seg.bp.col, lty=3)
    
    lines(rep(max(c(max(pos1), min(pos2))), 2), range(intensity.lim), col=seg.bp.col, lty=3)
    lines(range(pos1), rep(atten1.mu[1], 2), col = het.col)
@@ -316,57 +333,28 @@ PlotSnpIntensities <- function(i, res, genomic.limits, intensity.lim, bgl.gt.p=N
    
 }
 
+
 PlotCnIntensities <- function(i, res, genomic.limits, intensity.lim) {
 
-# res = iams.res
-# i = 1
-# genomic.limits = range(c(res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i+1]][['pos']],
-#             res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i+1]][['pos']],
-#             res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][['pos']]))
-# genomic.limits = genomic.limits / 1e6 
-# ScarterPar()
-# probe.type = "cn"
-# all.d = list()
-# all.d[["snp"]] = c(colSums(iams.res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i]]), colSums(iams.res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i+1]]))
-# all.d[["cn"]] = c(iams.res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i]], iams.res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i+1]])
-# all.d[["capseg"]] = c(iams.res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i]], iams.res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i+1]])
-# medians = lapply(all.d, median )
-# if (!is.na(medians[[probe.type]]) ) {
-#    other.probe.types = setdiff(names(all.d), probe.type)
-#    d1 = abs(medians[[probe.type]] - medians[[other.probe.types[1] ]])
-#    d2 = abs(medians[[probe.type]] - medians[[other.probe.types[2] ]])
-#    if ( max(c(d1, d2)) > 30 | is.na(max(c(d1, d2))) ) {
-#       quant = quantile(all.d[[probe.type]], probs=seq(from=.01, 1, length.out=100))
-#       intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
-#    } else {
-#       quant = quantile(c(all.d[["snp"]], all.d[["cn"]], all.d[["capseg"]]), probs=seq(from=.01, 1, length.out=100))
-#       intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
-#    }
-#    if (intensity.lim[2] - intensity.lim[1] < 5 ) intensity.lim = c(mean(intensity.lim) - 2.5, mean(intensity.lim) + 2.5)
-# }  else {
-#    plot(1, type="n", xlab="Genomic Position", ylab="Copy Ratio", xlim=genomic.limits, main="")
-#    return()
-#    
-# }
-   
    
    ########
+   genomic.limits <- genomic.limits / 1e6
    seg.chr = res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i]][["chr"]]
-   theta = res[["em.fit"]][["theta"]]
-   delta.tau = res[["em.fit"]][["delta.tau"]]
+   theta = res[["array.em.fit"]][["theta"]]
+   delta.tau = res[["array.em.fit"]][["delta.tau"]]
    tau1 = delta.tau[i, 2]
    tau2 = delta.tau[i+1, 2]
    
    seg1.col = c("red", "darkred")
    seg2.col = c("blue", "lightblue")
    
-   seg1.d = PlotCnSegfit(i, res, min = intensity.lim[1], max=intensity.lim[2], plot=F) 
-   seg2.d = PlotCnSegfit(i+1, res, min = intensity.lim[1], max=intensity.lim[2], plot=F)
+   seg1.d = PlotCnSegfit(i, res, min = intensity.lim[1], max=intensity.lim[2], plot=FALSE) 
+   seg2.d = PlotCnSegfit(i+1, res, min = intensity.lim[1], max=intensity.lim[2], plot=FALSE)
    ints = c(seg1.d, seg2.d)
    pos1 = res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i]][["pos"]] / 1e6
    pos2 = res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i+1]][["pos"]] / 1e6
    pos = c(pos1, pos2)
-   seg12 = data.frame(intensity=ints, position=pos, col=c(rep(seg1.col[1], length(seg1.d)),  rep(seg2.col[1], length(seg2.d))), stringsAsFactors=F)
+   seg12 = data.frame(intensity=ints, position=pos, col=c(rep(seg1.col[1], length(seg1.d)),  rep(seg2.col[1], length(seg2.d))), stringsAsFactors=FALSE)
    seg12 = seg12[order(seg12$position), ]
    
    if (nrow(seg12) == 0) {
@@ -379,7 +367,7 @@ PlotCnIntensities <- function(i, res, genomic.limits, intensity.lim) {
          paste("CN Chr:", seg.chr, "Segments: ", i, "and", i+1, 
                "\n Seg1 GC: ", round(res[["seg.dat"]][["seg.info"]][i,"GC.Content"], 2), 
                "Seg2 GC: ", round(res[["seg.dat"]][["seg.info"]][i+1,"GC.Content"], 2)),      
-         paste("CN Chr:", seg.chr, "Segments: ", i, "and", i+1, "\n", array.name))
+         paste("CN Chr:", seg.chr, "Segments: ", i, "and", i+1))
 
    plot(seg12$position, seg12$intensity, pch=19, col=seg12$col, cex=.4, main=main, xlab="Genomic Position (MB)", 
          ylab="Copy Ratio", ylim = intensity.lim, xlim=genomic.limits)
@@ -387,28 +375,47 @@ PlotCnIntensities <- function(i, res, genomic.limits, intensity.lim) {
    lines(range(pos1), rep(tau1, 2), lwd=4, col=seg1.col[2] )
    lines(range(pos2), rep(tau2, 2), lwd=4, col=seg2.col[2] )
    legend("topright", legend=c("Seg1 Tau", "Seg2 Tau"), fill=c(seg1.col[2], seg2.col[2]))
+
 }
 
-PlotIntensityPlus <- function(i, res) {
-# res = iams.res
-# i = 9
+
+PlotCapIntensitiesBryan <- function(i, res, genomic.limits, intensity.lim, use.capseg.mean=FALSE, draw.legend=TRUE, capseg.seg.fn=NULL, capseg.sample.name=NULL) {
    
-   genomic.limits = range(c(res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i+1]][['pos']],
-               res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i+1]][['pos']],
-               res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][['pos']]))
-   genomic.limits = genomic.limits / 1e6
+   genomic.limits <- genomic.limits / 1e6
+   seg1.col = c("red", "darkred")
+   seg2.col = c("blue", "lightblue")   
+   seg.chr = res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i]][["chr"]]
+   theta = res[["capture.em.fit"]][["Theta"]]
+   delta.tau = res[["capture.em.fit"]][["delta.tau"]]
+
    
+   pos1 = res[["as.res"]][['h.seg.dat']][["h.capseg.annot"]][[i]][["pos"]] / 1e6
+   pos2 = res[["as.res"]][['h.seg.dat']][["h.capseg.annot"]][[i+1]][["pos"]] / 1e6
+   int = c(res[["as.res"]][['h.seg.dat']][["h.capseg.d"]][[i]], res[["as.res"]][['h.seg.dat']][["h.capseg.d"]][[i+1]])
+   seg12 = data.frame(intensity=int, position=c(pos1, pos2), col=c(rep(seg1.col[1], length(pos1)), rep(seg2.col[1], length(pos2))), stringsAsFactors=F)
    
-   CalcIntensityLims <- function(probe.type) {
-      all.d = list()
-      all.d[["snp"]] = c(res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i]][1,],
-            res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i]][2,],
-            res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i+1]][1,],
-            res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i+1]][2,])
-      all.d[["cn"]] = c(res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i]], res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i+1]])
-      all.d[["capseg"]] = c(res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i]], res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i+1]])
-      medians = lapply(all.d, median )
-      
+   if (nrow(seg12) == 0) {
+      plot(1, type="n", xlab="Genomic Position (MB)", ylab="Copy Ratio", xlim=genomic.limits, ylim=intensity.lim, main=paste("Segs", i, "and", i+1))
+      return()
+   }
+   seg12$intensity = pmin(intensity.lim[2], pmax(intensity.lim[1], seg12$intensity))
+   
+   main = ifelse(!is.null(res[["seg.dat"]][["seg.info"]][i,"GC.Content"]), 
+         paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1, 
+               "\n Seg1 GC: ", round(res[["seg.dat"]][["seg.info"]][i,"GC.Content"], 2), 
+               "Seg2 GC: ", round(res[["seg.dat"]][["seg.info"]][i+1,"GC.Content"], 2)),      
+         paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1))
+   
+   plot(seg12$position, seg12$intensity, pch=19, col=seg12$col, cex=.4, main=main, xlab="Genomic Position (MB)", 
+         ylab="Copy Ratio", ylim = intensity.lim, xlim=genomic.limits)
+   
+   atten.tau1 = AffyAtten(delta.tau[i, 2], res[["capture.em.fit"]][["Theta"]][["at.capseg"]])
+   atten.tau2 = AffyAtten(delta.tau[i+1, 2], res[["capture.em.fit"]][["Theta"]][["at.capseg"]])
+   lines(range(pos1), rep(atten.tau1, 2), col=seg1.col[2], lwd=3)
+   lines(range(pos2), rep(atten.tau2, 2), col=seg2.col[2], lwd=3)
+   
+   if (use.capseg.mean) {
+      if (is.null(capseg.seg.fn) | is.null(capseg.sample.name)) stop("Need to specify capseg-based segfile and the sample name.")     
       if (!is.na(medians[[probe.type]])) {
          other.probe.types = setdiff(names(all.d), probe.type)
          d1 = abs(medians[[probe.type]] - medians[[other.probe.types[1] ]])
@@ -426,38 +433,24 @@ PlotIntensityPlus <- function(i, res) {
          return(NULL)
       }
       
+      coords = do.call('rbind', lapply(start:end, function(r) c(max(pos.range[1], cap.seg.chr$Start.bp[r]), min(pos.range[2], cap.seg.chr$End.bp[r]), cap.seg.chr$copy_num[r]) ) ) #start, end, seg.mean
+      
+      for (j in 1:nrow(coords) ) {
+         lines(c(coords[j,1], coords[j,2]) / 1e6 , rep(coords[j, 3], 2), col=c(seg1.col[2], seg2.col[2])[(j+1)%%2 + 1], lwd=3, lty=4 )
+      }
+   }
+
+   if (draw.legend) {
+      if (use.capseg.mean) {
+         legend("topright", legend=c("SNP-derived Mu3", "Capseg Mean"), lty=c(1, 4), lwd=3)   
+      } else {
+         legend("topright", legend=c("SNP-derived Mu3"), lty=c(1), lwd=3)   
+      }
       
    }
-   
-   snp.ilim = CalcIntensityLims("snp")
-   cn.ilim = CalcIntensityLims("cn")
-   capseg.ilim = CalcIntensityLims("capseg")
-   
-   ScarterPar()
-   par(mfrow=c(2, 4))
-   PlotSnpIntensities(i, res, genomic.limits, intensity.lim=snp.ilim, BGL.GT.P, subtitle="Beagle Phased")
-   PlotSnpIntensities(i, res, genomic.limits, intensity.lim=snp.ilim, subtitle="Hapseg Phased")
-   PlotCnIntensities(i, res, genomic.limits, intensity.lim=cn.ilim)
-   PlotCapIntensities(i, res, genomic.limits, intensity.lim=capseg.ilim)
-   
-   
-   Plot2DAllele(i, res, main = "Seg 1")
-   Plot2DAllele(i+1, res, main = "Seg 2")
-   PlotFFit(i, res, plot=T)
-   PlotFFit(i+1, res, plot=T)
-   
+
 }
 
-
-PlotCdf <- function(seg1.sum, seg2.sum, mrg.seg.sum, probe.type, H0.ev, H1.ev) {
-   plot(ecdf(seg1.sum), xlim=xlim, ylim=c(0,1), main="", xlab="", col=h0.cols, do.points=F)
-   par(new=T)
-   plot(ecdf(seg2.sum), xlim=xlim, ylim=c(0,1), main="", xlab="", col=h0.cols, do.points=F)
-   par(new=T)
-   plot(ecdf(mrg.seg.sum), xlim=xlim, ylim=c(0,1), main=paste(probe.type, "eCDF"), xlab=ifelse(probe.type == "cn", "Copy Ratio", "A + B"), col=h1.cols, do.points=F, lwd=2)
-   legend("topleft", legend=c(paste("H0:", H0.ev), paste("H1: ", H1.ev)), fill=c(h0.cols, h1.cols) )
-   
-}
 
 PlotEllipseScatter <- function(x, y, a, b, add=F, ...) {
    
@@ -535,7 +528,7 @@ PlotWesSnpConcordance <- function(res, conf, type="unatten") {
    par(mfcol=c(2,2))
    
    all.conf = list()
-   unatten.snp.mu = t(apply(res[["em.fit"]][["delta.tau"]], 1, function(x) GetMeans(x[1], x[2])))
+   unatten.snp.mu = t(apply(res[["em.fit"]][["delta.tau"]], 1, function(x) AffyGetMeans(x[1], x[2])))
    
    
    #####
@@ -544,11 +537,11 @@ PlotWesSnpConcordance <- function(res, conf, type="unatten") {
    
    n.segs = length(res[["em.fit"]][["cap.e.mu"]][,"mu1"])
    wes.minor = ifelse(rep(type=="unatten", n.segs), 
-         InvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu1"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
+         AffyInvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu1"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
          res[["em.fit"]][["cap.e.mu"]][,"mu1"])
    snp.minor = ifelse(rep(type=="unatten", n.segs),
          unatten.snp.mu[,1],
-         Atten(unatten.snp.mu[,1], res[["em.fit"]][["theta"]][["at"]]))
+         AffyAtten(unatten.snp.mu[,1], res[["em.fit"]][["theta"]][["at"]]))
    
    wes.conf = lapply(1:n.segs, function(i) CalcConf(mu = wes.minor[i], sigma=res[["em.fit"]][["cap.e.mu"]][i,"sigma1"], conf=conf) )
    snp.conf = lapply(1:n.segs, function(i) {
@@ -567,11 +560,11 @@ PlotWesSnpConcordance <- function(res, conf, type="unatten") {
    #####
    
    wes.major = ifelse(rep(type=="unatten", n.segs), 
-         InvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu2"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
+         AffyInvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu2"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
          res[["em.fit"]][["cap.e.mu"]][,"mu2"])
    snp.major = ifelse(rep(type=="unatten", n.segs),
          unatten.snp.mu[,2],
-         Atten(unatten.snp.mu[,2], res[["em.fit"]][["theta"]][["at"]]))
+         AffyAtten(unatten.snp.mu[,2], res[["em.fit"]][["theta"]][["at"]]))
    
    wes.conf = lapply(1:n.segs, function(i) CalcConf(mu = wes.major[i], sigma=res[["em.fit"]][["cap.e.mu"]][i,"sigma2"], conf=conf) )
    snp.conf = lapply(1:n.segs, function(i) {
@@ -588,11 +581,11 @@ PlotWesSnpConcordance <- function(res, conf, type="unatten") {
    #####
    
    wes.hom = ifelse(rep(type=="unatten", n.segs), 
-         InvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu3"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
+         AffyInvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu3"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
          res[["em.fit"]][["cap.e.mu"]][,"mu3"])
    snp.hom = ifelse(rep(type=="unatten", n.segs),
          unatten.snp.mu[,3],
-         Atten(unatten.snp.mu[,3], res[["em.fit"]][["theta"]][["at"]]))
+         AffyAtten(unatten.snp.mu[,3], res[["em.fit"]][["theta"]][["at"]]))
    
    snp.conf = lapply(1:length(snp.hom), function(i) CalcConf(mu = snp.hom[i], sigma=res[["em.fit"]][["delta.tau.sd"]][i, "tau"], conf=conf) )
    wes.conf = lapply(1:length(wes.hom), function(i) CalcConf(mu = wes.hom[i] , sigma=res[["em.fit"]][["cap.e.mu"]][i,"sigma3"], conf=conf) )
@@ -606,8 +599,8 @@ PlotWesSnpConcordance <- function(res, conf, type="unatten") {
    #####
    
    y = ifelse(rep(type=="unatten", n.segs), 
-         InvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu3"], res[["em.fit"]][["theta"]][["at.capseg"]]) - res[["em.fit"]][["delta.tau"]][,2], 
-         res[["em.fit"]][["cap.e.mu"]][,"mu3"] - Atten(res[["em.fit"]][["delta.tau"]][,2], res[["em.fit"]][["theta"]][["at"]]))
+         AffyInvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu3"], res[["em.fit"]][["theta"]][["at.capseg"]]) - res[["em.fit"]][["delta.tau"]][,2], 
+         res[["em.fit"]][["cap.e.mu"]][,"mu3"] - AffyAtten(res[["em.fit"]][["delta.tau"]][,2], res[["em.fit"]][["theta"]][["at"]]))
    delta = res[["em.fit"]][["delta.tau"]][,1]
    delta.conf = lapply(1:length(delta), function(i) CalcConf(mu = delta[i], sigma=res[["em.fit"]][["delta.tau.sd"]][i, "delta"], conf=conf) )
    y.conf = lapply(1:length(y), function(i) {
@@ -636,23 +629,27 @@ PlotWesSnpConcordance <- function(res, conf, type="unatten") {
    #    TwoHist (x1, x2, breaks="Sturges", main=plot.name)
    # }
    
+
 }
 
 PlotWesSnpConcordanceMinorMajor <- function(res, conf, type="unatten") {
+   # OpenDev(save=T, file.path(RESULTS.DIR, "new.plots", "2dallele"))
+   # i = 1
+   # res = tot.res
    
-   # conf = .7
-   # res = iams.res
-   # type = 'unatten'
+
+   d <- res$as.res$h.seg.dat$h.snp.d[[i]] 
+   snp.clust.p <- res$array.em.fit$snp.clust.p[[i]]
+   snp.gt.p <- res[["as.res"]][["h.seg.dat"]][["h.snp.gt.p"]][[i]]
+   theta <- res$array.em.fit$theta
+   e.mu <- AffyAtten(AffyGetMeans(res[["array.em.fit"]][["delta.tau"]][i,1], res[["array.em.fit"]][["delta.tau"]][i,2]),
+      theta[["at"]])
    
    require(plotrix)
    lim = c(-0.5, 5)
-   ScarterPar()
-   par(mfcol=c(1,1))
-   
-   all.conf = list()
-   unatten.snp.mu = t(apply(res[["em.fit"]][["delta.tau"]], 1, function(x) GetMeans(x[1], x[2])))
    
    
+
    #####
    #  WES minor v SNP minor
    #####
@@ -664,11 +661,11 @@ PlotWesSnpConcordanceMinorMajor <- function(res, conf, type="unatten") {
       res[["seg.dat"]][["seg.info"]][i, "End.bp"] - res[["seg.dat"]][["seg.info"]][i, "Start.bp"] + 1
       })) / 3.2e9
    wes.minor = ifelse(rep(type=="unatten", n.segs), 
-         InvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu1"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
+         AffyInvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu1"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
          res[["em.fit"]][["cap.e.mu"]][,"mu1"])
    snp.minor = ifelse(rep(type=="unatten", n.segs),
          unatten.snp.mu[,1],
-         Atten(unatten.snp.mu[,1], res[["em.fit"]][["theta"]][["at"]]))
+         AffyAtten(unatten.snp.mu[,1], res[["em.fit"]][["theta"]][["at"]]))
    
    wes.conf = lapply(1:n.segs, function(i) CalcConf(mu = wes.minor[i], sigma=res[["em.fit"]][["cap.e.mu"]][i,"sigma1"], conf=conf) )
    snp.conf = lapply(1:n.segs, function(i) {
@@ -687,11 +684,11 @@ PlotWesSnpConcordanceMinorMajor <- function(res, conf, type="unatten") {
    #####
    
    wes.major = ifelse(rep(type=="unatten", n.segs), 
-         InvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu2"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
+         AffyInvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu2"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
          res[["em.fit"]][["cap.e.mu"]][,"mu2"])
    snp.major = ifelse(rep(type=="unatten", n.segs),
          unatten.snp.mu[,2],
-         Atten(unatten.snp.mu[,2], res[["em.fit"]][["theta"]][["at"]]))
+         AffyAtten(unatten.snp.mu[,2], res[["em.fit"]][["theta"]][["at"]]))
    
    wes.conf = lapply(1:n.segs, function(i) CalcConf(mu = wes.major[i], sigma=res[["em.fit"]][["cap.e.mu"]][i,"sigma2"], conf=conf) )
    snp.conf = lapply(1:n.segs, function(i) {
@@ -735,11 +732,11 @@ PlotWesSnpConcordanceMinorMajorOld <- function(res, conf, type="unatten") {
       res[["seg.dat"]][["seg.info"]][i, "End.bp"] - res[["seg.dat"]][["seg.info"]][i, "Start.bp"] + 1
       })) / 3.2e9
    wes.minor = ifelse(rep(type=="unatten", n.segs), 
-         InvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu1"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
+         AffyInvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu1"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
          res[["em.fit"]][["cap.e.mu"]][,"mu1"])
    snp.minor = ifelse(rep(type=="unatten", n.segs),
          unatten.snp.mu[,1],
-         Atten(unatten.snp.mu[,1], res[["em.fit"]][["theta"]][["at"]]))
+         AffyAtten(unatten.snp.mu[,1], res[["em.fit"]][["theta"]][["at"]]))
    
    wes.conf = lapply(1:n.segs, function(i) CalcConf(mu = wes.minor[i], sigma=res[["em.fit"]][["cap.e.mu"]][i,"sigma1"], conf=conf) )
    snp.conf = lapply(1:n.segs, function(i) {
@@ -759,11 +756,11 @@ PlotWesSnpConcordanceMinorMajorOld <- function(res, conf, type="unatten") {
    #####
    
    wes.major = ifelse(rep(type=="unatten", n.segs), 
-         InvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu2"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
+         AffyInvAtten(res[["em.fit"]][["cap.e.mu"]][,"mu2"], res[["em.fit"]][["theta"]][["at.capseg"]]), 
          res[["em.fit"]][["cap.e.mu"]][,"mu2"])
    snp.major = ifelse(rep(type=="unatten", n.segs),
          unatten.snp.mu[,2],
-         Atten(unatten.snp.mu[,2], res[["em.fit"]][["theta"]][["at"]]))
+         AffyAtten(unatten.snp.mu[,2], res[["em.fit"]][["theta"]][["at"]]))
    
    wes.conf = lapply(1:n.segs, function(i) CalcConf(mu = wes.major[i], sigma=res[["em.fit"]][["cap.e.mu"]][i,"sigma2"], conf=conf) )
    snp.conf = lapply(1:n.segs, function(i) {
@@ -786,28 +783,18 @@ PlotSnpAscn <- function(i, res, y.lab="Allelic copy-ratio", xcrds=NA, chr=NA,
       marker.gt.pal=NA, pch=".", cex=1.2, xaxt="s") {
    
    
-# y.lab="Allelic copy-ratio"
-# xcrds=NA; chr=NA;
-# seg.wd=1; add=FALSE; vertical=FALSE;
-# plot.markers=TRUE; col.markers=TRUE;
-# plot.segs=TRUE; het.seg.col.1=NA; het.seg.col.2=NA;
-# loci.annot=NA; merge.prob=NA; seg.log.ev=NA;
-# plot.tcn.seg=TRUE; d.quantiles=c(.1, .9);
-# marker.gt.pal=NA; pch=19; cex=.5; xaxt="s"
-# res = iams.res
-# i = 1
    
    d = res$as.res$h.seg.dat$h.snp.d[[i]] 
-   theta = res$em.fit$theta
-   mu = GetMeans(res[["em.fit"]][["delta.tau"]][i,1], res[["em.fit"]][["delta.tau"]][i,2])
-   e.mu = Atten(mu, theta[["at"]])
+   theta = res$array.em.fit$theta
+   mu = AffyGetMeans(res[["array.em.fit"]][["delta.tau"]][i,1], res[["array.em.fit"]][["delta.tau"]][i,2])
+   e.mu = AffyAtten(mu, theta[["at"]])
    sigma.epsilon = theta[["sigma.epsilon"]]
    sigma.eta = theta[["sigma.eta"]]
-   snp.clust.p = res[["em.fit"]][["snp.clust.p"]][[i]]
+   snp.clust.p = res[["array.em.fit"]][["snp.clust.p"]][[i]]
    snp.annot = res$as.res$h.seg.dat$h.snp.annot[[i]]
-   wes.minor.af = res[["em.fit"]][["wes.f"]][i]
-   e.mu.wes = Atten(c(wes.minor.af * mu[3], (1 - wes.minor.af) * mu[3]), theta[["at"]])
-   array.name = basename(results.dir)
+   wes.minor.af = res[["capture.em.fit"]][["wes.f"]][i]
+   e.mu.wes = AffyAtten(c(wes.minor.af * mu[3], (1 - wes.minor.af) * mu[3]), theta[["at"]])
+   array.name = basename(RESULTS.DIR)
    
    if (length(d) == 0 ) {
       plot(1, type="n", main=paste("No SNP data in this seg."))
@@ -952,16 +939,15 @@ PlotSnpAscn <- function(i, res, y.lab="Allelic copy-ratio", xcrds=NA, chr=NA,
 }
    
 
-Plot2DAllele <- function(i, res, main="") {   
-   # i = 163
-   # res = iams.res
+Plot2DAllele <- function(i, res, main="") {
+   # i = 1
+   # res = tot.res
    
    d = res$as.res$h.seg.dat$h.snp.d[[i]] 
-   snp.clust.p = res$em.fit$snp.clust.p[[i]]
+   snp.clust.p = res$array.em.fit$snp.clust.p[[i]]
    snp.gt.p = res[["as.res"]][["h.seg.dat"]][["h.snp.gt.p"]][[i]]
-   theta = res$em.fit$theta
-   e.mu = Atten(GetMeans(res[["em.fit"]][["delta.tau"]][i,1], res[["em.fit"]][["delta.tau"]][i,2]),
-      theta[["at"]])
+   theta = res$array.em.fit$theta
+   e.mu = AffyAtten(AffyGetMeans(res[["array.em.fit"]][["delta.tau"]][i,1], res[["array.em.fit"]][["delta.tau"]][i,2]), theta[["at"]])
    
 
 
@@ -975,7 +961,7 @@ Plot2DAllele <- function(i, res, main="") {
    sigma.h <- GetSigmaH(sigma.epsilon, sigma.eta)
    
    
-   x.tx <- HTx(x, sigma.epsilon, sigma.eta) 
+   # x.tx <- HTx(x, sigma.epsilon, sigma.eta) 
    e.mu <- HTx(e.mu, sigma.epsilon, sigma.eta)
    mu0 <- 0
    mu0.tx <- HTx(mu0, sigma.epsilon, sigma.eta)
@@ -1013,16 +999,16 @@ Plot2DAllele <- function(i, res, main="") {
    hom.sigma <- matrix(c(sigma.h^2, 0, 0, sigma.h^2), nrow=2, ncol=2)
    invert.hom.sigma <- solve(hom.sigma)
    
-   het.1 <- array(scale * ngt.t[2] * DmvFunc(x, c(e.mu[1], e.mu[2]), sigma, invert.sigma, nu), dim=c(gl, gl))
-   het.2 <- array(scale * ngt.t[2] * DmvFunc(x, c(e.mu[2], e.mu[1]), sigma, invert.sigma, nu), dim=c(gl, gl))
+   het.1 <- array(scale * ngt.t[2] * AffyDmvFunc(x, c(e.mu[1], e.mu[2]), sigma, invert.sigma, nu), dim=c(gl, gl))
+   het.2 <- array(scale * ngt.t[2] * AffyDmvFunc(x, c(e.mu[2], e.mu[1]), sigma, invert.sigma, nu), dim=c(gl, gl))
    
-   hom.1 <- array(scale * ngt.t[1] * DmvFunc(x, c(mu0.tx, e.mu[3]), hom.sigma, invert.hom.sigma, nu), dim=c(gl, gl))
-   hom.2 <- array(scale * ngt.t[1] * DmvFunc(x, c(e.mu[3], mu0.tx), hom.sigma, invert.hom.sigma, nu), dim=c(gl, gl))
+   hom.1 <- array(scale * ngt.t[1] * AffyDmvFunc(x, c(mu0.tx, e.mu[3]), hom.sigma, invert.hom.sigma, nu), dim=c(gl, gl))
+   hom.2 <- array(scale * ngt.t[1] * AffyDmvFunc(x, c(e.mu[3], mu0.tx), hom.sigma, invert.hom.sigma, nu), dim=c(gl, gl))
    csum2d <- het.1 + het.2 + hom.1 + hom.2
    
    ## compute densities at modes
-   het.md <- DmvFunc(c(e.mu[1], e.mu[2]), c(e.mu[1], e.mu[2]), sigma, invert.sigma, nu) * scale * ngt.t[2] 
-   hom.md <- DmvFunc(c(mu0.tx, e.mu[3]), c(mu0.tx, e.mu[3]), hom.sigma, invert.hom.sigma, nu) * scale * ngt.t[1]
+   het.md <- AffyDmvFunc(c(e.mu[1], e.mu[2]), c(e.mu[1], e.mu[2]), sigma, invert.sigma, nu) * scale * ngt.t[2] 
+   hom.md <- AffyDmvFunc(c(mu0.tx, e.mu[3]), c(mu0.tx, e.mu[3]), hom.sigma, invert.hom.sigma, nu) * scale * ngt.t[1]
    
    level_scales <- c(0.99, 0.95, 0.8, 0.5, 0.2)
    
@@ -1042,22 +1028,16 @@ Plot2DAllele <- function(i, res, main="") {
    
    ## tx data 2d fits
    d.tx <- HTx(d, sigma.epsilon, sigma.eta)
-   plot(0, type="n", main=main, xlim=c(t.min, t.max), ylim=c(t.min, t.max), xlab="A allele copy-ratio", 
-         ylab="B allele copy-ratio", bty="n")
+   plot(0, type="n", main=main, xlim=c(t.min, t.max), ylim=c(t.min, t.max), xlab="A allele copy-ratio", ylab="B allele copy-ratio", bty="n")
    points(d.tx[1, ], d.tx[2, ], col=pcols, pch=out.pch, cex=cex)
    
-   contour(x=x2d, y=x2d, z=het.1, add=TRUE, drawlabels=FALSE,
-         levels=level_scales*het.md, col=het.col)
-   contour(x=x2d, y=x2d, z=het.2, add=TRUE, drawlabels=FALSE,
-         levels=level_scales*het.md, col=het.col)
-   contour(x=x2d, y=x2d, z=hom.1, add=TRUE, drawlabels=FALSE,
-         levels=level_scales*hom.md, col=hom.col)
-   contour(x=x2d, y=x2d, z=hom.2, add=TRUE, drawlabels=FALSE,
-         levels=level_scales*hom.md, col=hom.col)
+   contour(x=x2d, y=x2d, z=het.1, add=TRUE, drawlabels=FALSE,levels=level_scales*het.md, col=het.col)
+   contour(x=x2d, y=x2d, z=het.2, add=TRUE, drawlabels=FALSE,levels=level_scales*het.md, col=het.col)
+   contour(x=x2d, y=x2d, z=hom.1, add=TRUE, drawlabels=FALSE,levels=level_scales*hom.md, col=hom.col)
+   contour(x=x2d, y=x2d, z=hom.2, add=TRUE, drawlabels=FALSE,levels=level_scales*hom.md, col=hom.col)
    
    abline(v=0, lty=2)
    abline(h=0, lty=2)
-   
 }
 
 PlotAll <- function(res, segs=NULL, plots=1:2, main="", save = F, subdir="") {
@@ -1087,7 +1067,7 @@ PlotAll <- function(res, segs=NULL, plots=1:2, main="", save = F, subdir="") {
       
       if (1 %in% plots) {
          
-         OpenDev(save=save, fn=file.path(results.dir, "plots", subdir, paste("Segs_", i,"_",i+1, "a.jpeg", sep="")))
+         OpenDev(save=save, fn=file.path(RESULTS.DIR, "plots", subdir, paste("Segs_", i,"_",i+1, "a.jpeg", sep="")))
          PlotAllIntensities(i, res)
          
          if (save) dev.off()
@@ -1095,7 +1075,7 @@ PlotAll <- function(res, segs=NULL, plots=1:2, main="", save = F, subdir="") {
       
       
       if (2 %in% plots) {
-         OpenDev(save=save, fn=file.path(results.dir, "plots", subdir, paste("Segs_", i,"_",i+1, "b.jpeg", sep="")))
+         OpenDev(save=save, fn=file.path(RESULTS.DIR, "plots", subdir, paste("Segs_", i,"_",i+1, "b.jpeg", sep="")))
          
          # CN Model
          h0.cols = c("blue")
@@ -1118,7 +1098,7 @@ PlotAll <- function(res, segs=NULL, plots=1:2, main="", save = F, subdir="") {
       }      
       
       if (3 %in% plots ) {
-         OpenDev(save=save, fn=file.path(results.dir, "plots", subdir, paste("Segs_", i,"_",i+1, "c.jpeg", sep="")))
+         OpenDev(save=save, fn=file.path(RESULTS.DIR, "plots", subdir, paste("Segs_", i,"_",i+1, "c.jpeg", sep="")))
          
          ScarterPar()
          par(mfrow=c(1, 2))
@@ -1172,7 +1152,7 @@ PlotSegFit <- function(d, snp.gt.p, snp.clust.p, snp.annot, e.mu,
    d = iams.res$as.res$h.seg.dat$h.snp.d[[i]] 
    snp.gt.p = iams.res$as.res$h.seg.dat$h.snp.gt.p[[i]]
    snp.clust.p = iams.res$em.fit$snp.clust.p[[i]]
-   e.mu = GetMeans(iams.res[["em.fit"]][["delta.tau"]][i,1], iams.res[["em.fit"]][["delta.tau"]][i,2])
+   e.mu = AffyGetMeans(iams.res[["em.fit"]][["delta.tau"]][i,1], iams.res[["em.fit"]][["delta.tau"]][i,2])
    theta = iams.res$em.fit$theta
    y.lab = NULL
    snp.annot = iams.res$as.res$h.seg.dat$h.snp.annot[[i]]
@@ -1369,8 +1349,481 @@ PlotSegFit <- function(d, snp.gt.p, snp.clust.p, snp.annot, e.mu,
 }
 
 
-## FIXME: needs heavy refactoring
 
+PlotAllSegfits <- function(i, res) {
+
+   par(bty="n", las=1, mfrow=c(2, 3))
+   PlotSnpSegfit(i, res, min=NULL, max=NULL,  plot=TRUE)
+   title(paste("SNP Seg", i))
+   PlotCnSegfit(i, res, min=NULL, max=NULL, plot=TRUE)
+   title(paste("CN Seg", i))
+   PlotCapsegSegfitBryan(i, res, min=NULL, max=NULL, plot=TRUE)
+   title(paste("Capseg Seg", i))
+
+   PlotSnpSegfit(i+1, res, min=NULL, max=NULL,  plot=TRUE)
+   title(paste("SNP Seg", i+1))
+   PlotCnSegfit(i+1, res, min=NULL, max=NULL, plot=TRUE)
+   title(paste("CN Seg", i+1))
+   PlotCapsegSegfitBryan(i+1, res, min=NULL, max=NULL, plot=TRUE)
+   title(paste("Capseg Seg", i+1))
+   
+}
+
+PlotArraySegfits <- function(i, res) {
+   # OpenDev(save=T, fn=file.path(RESULTS.DIR, "new.plots", "all.segfits"), reso=270)
+   # i <- 1
+   # res <- tot.res
+
+   par(bty="n", las=1, mfrow=c(2, 2))
+   PlotSnpSegfit(i, res, min=NULL, max=NULL,  plot=TRUE)
+   title(paste("SNP Seg", i))
+   PlotCnSegfit(i, res, min=NULL, max=NULL, plot=TRUE)
+   title(paste("CN Seg", i))
+   
+   PlotSnpSegfit(i+1, res, min=NULL, max=NULL,  plot=TRUE)
+   title(paste("SNP Seg", i+1))
+   PlotCnSegfit(i+1, res, min=NULL, max=NULL, plot=TRUE)
+   title(paste("CN Seg", i+1))
+   
+   # dev.off()
+   
+}
+
+PlotArrayAndCaptureIntensities <- function(i, res, bgl.gt.p=NULL) {
+
+   # OpenDev(save=TRUE, fn=file.path(RESULTS.DIR, "new.plots", "plotall"))
+   # res = tot.res
+   # i = 1
+   # bgl.gt.p <- NULL
+   
+   genomic.limits = range(c(res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i+1]][['pos']],
+               res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i+1]][['pos']],
+               res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][['pos']]))
+   
+   CalcIntensityLims <- function(probe.type) {
+      all.d = list()
+      all.d[["snp"]] = c(res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i]][1,],
+            res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i]][2,],
+            res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i+1]][1,],
+            res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i+1]][2,])
+      all.d[["cn"]] = c(res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i]], res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i+1]])
+      all.d[["capseg"]] = c(res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i]], res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i+1]])
+      medians = lapply(all.d, median )
+      
+      if (!is.na(medians[[probe.type]])) {
+         other.probe.types = setdiff(names(all.d), probe.type)
+         d1 = abs(medians[[probe.type]] - medians[[other.probe.types[1] ]])
+         d2 = abs(medians[[probe.type]] - medians[[other.probe.types[2] ]])
+         if ( max(c(d1, d2)) > 30 | is.na(max(c(d1, d2))) ) {
+            quant = quantile(all.d[[probe.type]], probs=seq(from=.01, 1, length.out=100))
+            intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
+         } else {
+            quant = quantile(c(all.d[["snp"]], all.d[["cn"]], all.d[["capseg"]]), probs=seq(from=.01, 1, length.out=100))
+            intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
+         }
+         if (intensity.lim[2] - intensity.lim[1] < 5 ) intensity.lim = c(mean(intensity.lim) - 2.5, mean(intensity.lim) + 2.5)
+         return(intensity.lim)   
+      } else {
+         return(NULL)
+      }
+      
+      
+   }
+   
+   snp.ilim = CalcIntensityLims("snp")
+   cn.ilim = CalcIntensityLims("cn")
+   capseg.ilim = CalcIntensityLims("capseg")
+   
+   par(bty="n")
+   par(las=1)
+   par(mfrow=c(2, 4))
+   if (!is.null(bgl.gt.p)) {
+      PlotSnpIntensities(i, res, genomic.limits, intensity.lim=snp.ilim, bgl.gt.p, subtitle="Beagle Phased")   
+   }
+   PlotSnpIntensities(i, res, genomic.limits, intensity.lim=snp.ilim, subtitle="Hapseg Phased")
+   PlotCnIntensities(i, res, genomic.limits, intensity.lim=cn.ilim)
+   PlotCapIntensitiesBryan(i, res, genomic.limits, intensity.lim=capseg.ilim)
+   
+   
+   Plot2DAllele(i, res, main = "Seg 1")
+   Plot2DAllele(i+1, res, main = "Seg 2")
+   # PlotFFit(i, res$as.res$h.seg.dat, f.hat=res$capture.em.fit$wes.f[i, "f.hat"], f.H0.p=res$capture.em.fit$wes.f[i, "p.H0"], f.H1.p=res$capture.em.fit$wes.f[i, "p.H1"], Theta=res$capture.em.fit$Theta, conf=.95, plot=TRUE) 
+   # PlotFFit(i+1, res$as.res$h.seg.dat, f.hat=res$capture.em.fit$wes.f[i+1, "f.hat"], f.H0.p=res$capture.em.fit$wes.f[i+1, "p.H0"], f.H1.p=res$capture.em.fit$wes.f[i+1, "p.H1"], Theta=res$capture.em.fit$Theta, conf=.95, plot=TRUE)   
+
+   # PlotFFit(i, res, conf=.95, plot=TRUE) 
+   # PlotFFit(i+1, res, conf=.95, plot=TRUE)
+
+}
+
+PlotArrayIntensities <- function(i, res, bgl.gt.p=NULL) {
+
+   # OpenDev(save=TRUE, fn=file.path(RESULTS.DIR, "new.plots", "plotall"))
+   # res = tot.res
+   # i = 2
+   # bgl.gt.p <- NULL
+   
+   genomic.limits = range(c(res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i+1]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.cn.annot"]][[i+1]][['pos']]))
+   
+   CalcIntensityLims <- function(probe.type) { 
+
+      all.d = list()
+      all.d[["snp"]] = c(res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i]][1,],
+            res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i]][2,],
+            res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i+1]][1,],
+            res[["as.res"]][["h.seg.dat"]][["h.snp.d"]][[i+1]][2,])
+      all.d[["cn"]] = c(res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i]], res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i+1]])
+      medians = lapply(all.d, median )
+      
+      if (!is.na(medians[[probe.type]])) {
+         other.probe.types = setdiff(names(all.d), probe.type)
+         d1 = abs(medians[[probe.type]] - medians[[other.probe.types[1] ]])
+         d2 = abs(medians[[probe.type]] - medians[[other.probe.types[2] ]])
+         if ( max(c(d1, d2)) > 30 | is.na(max(c(d1, d2))) ) {
+            quant = quantile(all.d[[probe.type]], probs=seq(from=.01, 1, length.out=100))
+            intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
+         } else {
+            quant = quantile(c(all.d[["snp"]], all.d[["cn"]]), probs=seq(from=.01, 1, length.out=100))
+            intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
+         }
+         if (intensity.lim[2] - intensity.lim[1] < 5 ) intensity.lim = c(mean(intensity.lim) - 2.5, mean(intensity.lim) + 2.5)
+         return(intensity.lim)   
+      } else {
+         return(NULL)
+      }
+      
+      
+   }
+   
+   snp.ilim = CalcIntensityLims("snp")
+   cn.ilim = CalcIntensityLims("cn")
+   
+   par(bty="n")
+   par(las=1)
+   par(mfrow=c(2, 2))
+   if (!is.null(bgl.gt.p)) {
+      par(mfrow=c(2, 3))
+      PlotSnpIntensities(i, res, genomic.limits, intensity.lim=snp.ilim, bgl.gt.p, subtitle="Beagle Phased")   
+   }
+   PlotSnpIntensities(i, res, genomic.limits, intensity.lim=snp.ilim, subtitle="Hapseg Phased")
+   PlotCnIntensities(i, res, genomic.limits, intensity.lim=cn.ilim)
+      
+   Plot2DAllele(i, res, main = "Seg 1")
+   Plot2DAllele(i+1, res, main = "Seg 2")
+
+}
+
+
+Plot_het_AF_vs_cov = function(i, res)
+{
+   d = h.seg.dat[["gh.wes.allele.d"]][[i]]
+   alt=d["alt",]
+   ref= d["ref",] 
+
+   cov = alt+ref
+   AF = alt / cov
+
+   mn =  paste( ncol(d), "het snps", sep="" )
+   plot( cov, AF, pch=16, cex=0.2, main=mn, xlab="Coverage", ylab="Fraction alt reads" )
+
+}
+
+PlotEllipseScatter <- function(x, y, a, b, add=F, ...) {
+   
+   idx = complete.cases(a) & complete.cases(b) & complete.cases(x) & complete.cases(y)
+   a = a[idx]
+   b = b[idx]
+   x=x[idx] 
+   y=y[idx]
+   
+   CalcEllipseCol <- function(a, b){
+      e.area = pi*a*b
+      scale = quantile(e.area, 1:100/100)[90] / tan(.8)
+      alpha = atan((e.area) / scale) / (pi / 2)
+      grey.scale = rgb(alpha, alpha, alpha, (1-alpha)/2)
+      return(grey.scale)
+   }
+   if (!add) {
+      plot(0, type="n", ...)   
+   }
+   col = CalcEllipseCol(a, b)   
+   min.rad = .025
+   draw.ellipse(x=x, y=y, a=pmax(min.rad, a), b=pmax(min.rad, b), angle = 0, segment = c(0, 360), 
+         arc.only = TRUE, deg = TRUE, nv = 100, border = NA, col = col, lty = 1, lwd = 1)
+   
+   pars = list(...)
+   lines(c(0, max(pars[['xlim']])), c(0, max(pars[['ylim']])), lty=3, col="black", lwd=2)
+   lines(c(0, max(pars[['ylim']])), c(0,0), lty=3, col="grey")
+   lines(c(0,0), c(0, max(pars[['ylim']])), lty=3, col="grey")
+   
+}
+
+PlotArrayCaptureConcordance <- function(array.em.fit, capture.em.fit, conf, type="unatten") {
+
+   # conf = .7
+   # type = 'unatten'
+   # array.em.fit <- tot.res[["array.em.fit"]]
+   # capture.em.fit <- tot.res[["capture.em.fit"]] 
+
+   require(plotrix)
+   lim = c(-0.5, 5)
+   par(bty="n")
+   par(las=1)
+   par(mfcol=c(2,2))
+   
+   all.conf <- list()
+   unatten.snp.mu <- t(apply(array.em.fit[["delta.tau"]], 1, function(x) AffyGetMeans(x[1], x[2]))); colnames(unatten.snp.mu) <- c("mu1", "mu2", "mu3")
+   array.n.segs <- nrow(unatten.snp.mu)
+   capture.n.segs <- nrow(capture.em.fit[["delta.tau"]])
+   if (array.n.segs != capture.n.segs) {
+      stop("Array and Capture segmentations are inconsistent.")
+      } else n.segs <- array.n.segs
+   
+   #####
+   #  WES minor v SNP minor
+   #####
+   
+   
+   wes.minor <- ifelse(rep(type=="unatten", n.segs), 
+         AffyInvAtten(capture.em.fit[["cap.e.mu"]][,"mu1"], capture.em.fit[["Theta"]][["at.capseg"]]), 
+         capture.em.fit[["cap.e.mu"]][,"mu1"])
+   snp.minor <- ifelse(rep(type=="unatten", n.segs),
+         unatten.snp.mu[,1],
+         AffyAtten(unatten.snp.mu[,1], array.em.fit[["theta"]][["at"]]))
+   
+   wes.conf <- lapply(1:n.segs, function(i) CalcConf(mu = wes.minor[i], sigma=capture.em.fit[["cap.e.mu"]][i,"sigma1"], conf=conf) )
+   snp.conf <- lapply(1:n.segs, function(i) {
+            sigma = (array.em.fit[["delta.tau.sd"]][i, "tau"]^2 + array.em.fit[["delta.tau.sd"]][i, "delta"]^2)^(1/2) / 2
+            mu = snp.minor[i]
+            CalcConf(mu=mu, sigma=sigma, conf=conf)
+         } )
+   all.conf[["minor"]] = cbind(wes=sapply(wes.conf, function(x) abs(diff(x))), snp=sapply(snp.conf, function(x) abs(diff(x))))
+   
+   PlotEllipseScatter(x=snp.minor, y=wes.minor, a=all.conf[["minor"]][,"snp"], b=all.conf[["minor"]][,"wes"], xlim=lim, ylim=lim, xlab="SNP", 
+         ylab="WES", main=paste(type, " minor comparisons \n", round(100*conf), "% confidence interval"))
+   
+   
+   #####
+   # WES Major v SNP Major
+   #####
+   
+   wes.major = ifelse(rep(type=="unatten", n.segs), 
+         AffyInvAtten(capture.em.fit[["cap.e.mu"]][,"mu2"], capture.em.fit[["Theta"]][["at.capseg"]]), 
+         capture.em.fit[["cap.e.mu"]][,"mu2"])
+   snp.major = ifelse(rep(type=="unatten", n.segs),
+         unatten.snp.mu[,2],
+         AffyAtten(unatten.snp.mu[,2], array.em.fit[["theta"]][["at"]]))
+   
+   wes.conf = lapply(1:n.segs, function(i) CalcConf(mu = wes.major[i], sigma=capture.em.fit[["cap.e.mu"]][i,"sigma2"], conf=conf) )
+   snp.conf = lapply(1:n.segs, function(i) {
+            sigma = (array.em.fit[["delta.tau.sd"]][i, "tau"]^2 + array.em.fit[["delta.tau.sd"]][i, "delta"]^2)^(1/2) / 2
+            mu = snp.major[i]
+            CalcConf(mu=mu, sigma=sigma, conf=conf)
+         } )
+   all.conf[["major"]] = cbind(wes=sapply(wes.conf, function(x) abs(diff(x))), snp=sapply(snp.conf, function(x) abs(diff(x))))
+   PlotEllipseScatter(x=snp.major, y=wes.major, a=all.conf[["major"]][,"snp"], b=all.conf[["major"]][,"wes"], xlim=lim, ylim=lim, xlab="SNP", 
+         ylab="WES", main=paste(type, "major comparisons \n", round(100*conf), "% confidence interval"))   
+   
+   #####
+   #  WES Hom v SNP Hom
+   #####
+   
+   wes.hom = ifelse(rep(type=="unatten", n.segs), 
+         AffyInvAtten(capture.em.fit[["cap.e.mu"]][,"tau"], capture.em.fit[["Theta"]][["at.capseg"]]), 
+         capture.em.fit[["cap.e.mu"]][,"tau"])
+   snp.hom = ifelse(rep(type=="unatten", n.segs),
+         unatten.snp.mu[,3],
+         AffyAtten(unatten.snp.mu[,3], array.em.fit[["theta"]][["at"]]))
+   
+   snp.conf = lapply(1:length(snp.hom), function(i) CalcConf(mu = snp.hom[i], sigma=array.em.fit[["delta.tau.sd"]][i, "tau"], conf=conf) )
+   wes.conf = lapply(1:length(wes.hom), function(i) CalcConf(mu = wes.hom[i] , sigma=capture.em.fit[["cap.e.mu"]][i,"sigma3"], conf=conf) )
+   all.conf[["hom"]] = cbind(wes=sapply(wes.conf, function(x) abs(diff(x))), snp=sapply(snp.conf, function(x) abs(diff(x))))
+   
+   PlotEllipseScatter(x=snp.hom, y=wes.hom, a=all.conf[["hom"]][,"snp"], b=all.conf[["hom"]][,"wes"], xlim=lim, ylim=lim, xlab="SNP", 
+         ylab="WES", main=paste(type, " hom comparisons \n", round(100*conf), "% confidence interval"))
+   
+   #####
+   #  WES.mu3 - SNP.Mu3 v. delta
+   #####
+   
+   y = ifelse(rep(type=="unatten", n.segs), 
+         AffyInvAtten(capture.em.fit[["cap.e.mu"]][,"tau"], capture.em.fit[["Theta"]][["at.capseg"]]) -capture.em.fit[["delta.tau"]][,2], 
+         capture.em.fit[["cap.e.mu"]][,"tau"] - AffyAtten(capture.em.fit[["delta.tau"]][,2], array.em.fit[["theta"]][["at"]]))
+   delta =capture.em.fit[["delta.tau"]][,1]
+   delta.conf = lapply(1:length(delta), function(i) CalcConf(mu = delta[i], sigma=array.em.fit[["delta.tau.sd"]][i, "delta"], conf=conf) )
+   y.conf = lapply(1:length(y), function(i) {
+            snp.mu3.sigma = array.em.fit[["delta.tau.sd"]][i, "tau"]
+            wes.mu3.sigma = capture.em.fit[["cap.e.mu"]][i,"sigma3"] 
+            sigma = (wes.mu3.sigma^2 + snp.mu3.sigma^2)^(1/2)
+            mu = y[i]
+            CalcConf(mu=mu, sigma=sigma, conf=conf)
+         } )
+   all.conf[["hom.diff.v.delta"]] = cbind(hom.diff=sapply(y.conf, function(x) abs(diff(x))), delta=sapply(delta.conf, function(x) abs(diff(x))))
+   
+   PlotEllipseScatter(x=delta, y=y, a=all.conf[["hom.diff.v.delta"]][,"delta"], b=all.conf[["hom.diff.v.delta"]][,"hom.diff"], xlim=c(-1,5), ylim=c(-3,3), 
+         xlab="Delta", ylab="WES Hom - SNP Hom", main=paste("Delta Dependence on Concordance \n", round(100*conf), "% confidence interval"))
+   
+   
+   # ######
+   # # Plot 5: Distributions of error bars
+   # ######
+   
+   # all.conf
+   # for (i in 1:length(all.conf)) {
+   #    i = 1
+   #    x1 = all.conf[[i]][,1]
+   #    x2 = all.conf[[i]][,2]
+   #    plot.name = names(all.conf)[i]
+   #    TwoHist (x1, x2, breaks="Sturges", main=plot.name)
+   # }
+   
+}
+
+
+PlotAll <- function(res, segs=NULL, plots=1:2, main="", save = F, subdir="") {
+
+   print("Plotting...")
+   res = tot.res
+   segs = NULL
+   if (is.null(segs)) {
+      segs = 1:(length(res[["as.res"]][["h.seg.dat"]][["h.snp.d"]])-1)
+   }
+   segs = sapply(segs, function(i) {
+            
+            if (res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i]][["chr"]] != res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]][[i+1]][["chr"]]) {
+               return(NULL)
+            } else return(i)
+         })
+   segs = unlist(segs)
+   foreach(i = segs, .combine=c) %dopar% { loopStatus(i, step=1)
+#    res = tot.res
+#    i = 8
+#    save = F
+#    plots=1:3; main = ""
+      
+      seg1.col = c("red", "darkred")
+      seg2.col = c("purple", "darkblue")
+      
+      if (1 %in% plots) {
+         
+         OpenDev(save=save, fn=file.path(RESULTS.DIR, "plots", subdir, paste("Segs_", i,"_",i+1, "a.jpeg", sep="")))
+         PlotAllIntensities(i, res)
+         
+         if (save) dev.off()
+      }
+      
+      
+      if (2 %in% plots) {
+         OpenDev(save=save, fn=file.path(RESULTS.DIR, "plots", subdir, paste("Segs_", i,"_",i+1, "b.jpeg", sep="")))
+         
+         # CN Model
+         h0.cols = c("blue")
+         h1.cols = c("green")
+         ScarterPar()
+         par(cex=4)
+         par(mfrow=c(2, 3))
+         xlim = c(-0.5, 5)
+         ylim=c(0,1)
+         
+         # PDF
+         PlotCnSegfit(i, res)
+         PlotSnpSegfit(i, res)
+         PlotCapsegSegfit(i, res)
+         PlotCnSegfit(i+1, res)
+         PlotSnpSegfit(i+1, res)
+         PlotCapsegSegfit(i+1, res)
+         title(array.name)
+         if(save) dev.off()
+      }      
+      
+      if (3 %in% plots ) {
+         OpenDev(save=save, fn=file.path(RESULTS.DIR, "plots", subdir, paste("Segs_", i,"_",i+1, "c.jpeg", sep="")))
+         
+         ScarterPar()
+         par(mfrow=c(1, 2))
+   
+         PlotFFit(i, res, conf=.95, plot=T)
+         
+         PlotSnpAscn(i, res, y.lab="Allelic copy-ratio", xcrds=NA, chr=NA,
+               add=FALSE, vertical=FALSE,
+               plot.markers=TRUE, col.markers=TRUE,
+               plot.segs=TRUE, het.seg.col.1=NA, het.seg.col.2=NA,
+               loci.annot=NA, merge.prob=NA, seg.log.ev=NA,
+               plot.tcn.seg=TRUE,
+               marker.gt.pal=NA, pch=20, cex=.4, xaxt="s")
+         
+         if(save) dev.off()
+      }
+      
+   }
+   
+   
+}
+
+PlotAllCapture <- function(res, save = F, subdir="") 
+{
+   CalcIntensityLims <- function(probe.type) 
+   {
+       all.d = list()
+       all.d[["capseg"]] = c(res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i]], res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i+1]])
+       medians = lapply(all.d, median )
+            
+       if (!is.na(medians[[probe.type]])) 
+       {
+          other.probe.types = setdiff(names(all.d), probe.type)
+          d1 = abs(medians[[probe.type]] - medians[[other.probe.types[1] ]])
+          d2 = abs(medians[[probe.type]] - medians[[other.probe.types[2] ]])
+          if ( max(c(d1, d2)) > 30 | is.na(max(c(d1, d2))) ) {
+             quant = quantile(all.d[[probe.type]], probs=seq(from=.01, 1, length.out=100))
+             intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
+          } else {
+             quant = quantile(c(all.d[["capseg"]]), probs=seq(from=.01, 1, length.out=100))
+             intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
+          }
+          if (intensity.lim[2] - intensity.lim[1] < 5 ) intensity.lim = c(mean(intensity.lim) - 2.5, mean(intensity.lim) + 2.5)
+          return(intensity.lim)   
+       } else {
+          return(NULL)
+       }
+   }
+
+#   foreach(i=1:(length(res[["as.res"]][["h.seg.dat"]][[1]]) -1)) %dopar% 
+   for( i in 1:(length(res[["as.res"]][["h.seg.dat"]][[1]]) -1)) 
+   { 
+      #loopStatus(i, 1)
+
+      if (res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][["chr"]] != res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][["chr"]]) 
+      {
+#         return(NULL)
+         next 
+      }
+
+      genomic.limits = range(c(res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][['pos']]))
+      genomic.limits = genomic.limits / 1e6
+   
+      ilim = CalcIntensityLims("capseg")
+
+      plot.dir = file.path(RESULTS.DIR, "plots", subdir)
+      dir.create(plot.dir, recursive=TRUE)
+
+      plot.fn = file.path( plot.dir, paste("Segs_", i,"_",i+1, "a.jpeg", sep=""))
+#      OpenDev(save<-save, fn=plot.fn)
+
+      jpeg(plot.fn, 7, 5, units="in", type="cairo", res=200, quality=100)
+
+      par(mfrow=c(2,3))
+      ScarterPar()
+      PlotCapIntensities(i, res, genomic.limits, ilim, use.capseg.mean=F, draw.legend=F)
+      PlotCapsegSegfit(i, res, min=ilim[1], max=ilim[2], plot=T)
+      PlotCapsegSegfit(i+1, res, min=ilim[1], max=ilim[2], plot=T)
+      PlotFFit(i, res, conf=.95, plot=T)
+      PlotFFit(i+1, res, conf=.95, plot=T)
+
+      Plot_het_AF_vs_cov(i, res)
+
+#      if (save) dev.off()
+      dev.off()
+   }
+}
 
 GetHapsegMarkerPal <- function() {
    hom.color <- "darkgrey"
