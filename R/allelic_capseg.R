@@ -43,7 +43,7 @@ if (is.na(SID) | length(SID) < 1) {
     quit(status=1)
 }
 
-lapply(list.files(code.dir, pattern="\\.R$", full.name=T), source)
+dddd = lapply(list.files(code.dir, pattern="\\.R$", full.name=T), source)
 
 SetPlatformSpecificFuncs("WES")
 
@@ -53,6 +53,6 @@ registerDoMC(1)
 library(numDeriv)  ## needed for 'hessian()'
 
 # lookup the sample name from the sample mapping file
-save.image("allelic.data")
+# save.image("allelic.data")
 
 AllelicCapseg( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, base.output.dir, min.seg.size, drop.x, drop.y, verbose )
