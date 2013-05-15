@@ -8,7 +8,7 @@
 ## whatsoever. Neither the Broad Institute nor MIT can be responsible for its
 ## use, misuse, or functionality.
 
-CaptureHscrSegFit <- function(h.seg.dat, RESULTS.DIR, tol=1e-5, verbose=verbose)
+CaptureHscrSegFit <- function(h.seg.dat, tol=1e-5, verbose=verbose)
 {
    # Initialize Theta_CN
    # while
@@ -16,7 +16,7 @@ CaptureHscrSegFit <- function(h.seg.dat, RESULTS.DIR, tol=1e-5, verbose=verbose)
    #       optimize tau_i given Theta_CN
    #    optimize Theta given tau
    #    break when cond < 1e-4
-   #
+   #   
    # Initialize Theta_AS
    # while
    #    for i in segs:
@@ -33,24 +33,17 @@ CaptureHscrSegFit <- function(h.seg.dat, RESULTS.DIR, tol=1e-5, verbose=verbose)
 
    # h.seg.dat <- cap.dat[["as.res"]][["h.seg.dat"]]
    # tol=1e-5;
-   CR.res <- LoadCached({
-      CR.res <- CaptureCNModelFit( h.seg.dat, verbose=verbose )
-      saveRDS(CR.res, file.path(RESULTS.DIR, "cr.res.rds"))
-      CR.res},
-      overwrite=TRUE, res.fn = file.path(RESULTS.DIR, "cr.res.rds"), mod.name="CaptureCNModelFit")
 
+
+   CR.res = CaptureCNModelFit( h.seg.dat, verbose=verbose )
    tau = CR.res[["tau"]]
    Theta_CR = CR.res[["Theta"]]
-   AS.res <- LoadCached({
-      AS.res <- CaptureASModelFit( h.seg.dat, verbose=verbose )
-      saveRDS(AS.res, file.path(RESULTS.DIR, "as.res.rds"))
-      AS.res},
-      overwrite=TRUE, res.fn=file.path(RESULTS.DIR, "as.res.rds"), mod.name="CaptureASModelFit")
 
-
+   AS.res = CaptureASModelFit( h.seg.dat, verbose=verbose )
    wes.f = AS.res[["wes.f"]]
    Theta_AS = AS.res[["Theta"]]
    het.phase.prob = AS.res[["het.phase.prob"]]
+
 
    Theta = c(Theta_CR, Theta_AS)
 
@@ -60,7 +53,7 @@ CaptureHscrSegFit <- function(h.seg.dat, RESULTS.DIR, tol=1e-5, verbose=verbose)
    seg.sems <- CalcAllelicSegSEMs(h.seg.dat, wes.f[,"f.hat"], wes.f[, "p.H0"], tau, Theta)
 
    mus = cbind( "mu1"=mu.minor, "mu2"=mu.major, tau, seg.sems )
-
+   
 ##? Do we need the delta / tau stuff?
 ## Yes - because the plotting code expects it.
    delta.tau <- data.frame(delta=mus[,"mu2"] - mus[,"mu1"], tau=tau)
@@ -80,17 +73,17 @@ CaptureASModelFit = function( h.seg.dat, verbose=FALSE )
    n.segs <- length(h.seg.dat[[1]])
 
    Theta <- InitCaptureASTheta(verbose=verbose)
-   wes.f <- InitCaptureF( h.seg.dat, Theta )
+   wes.f <- InitCaptureF( h.seg.dat, Theta ) 
 
    loglik <- -Inf
    iter <- 1
-   while(TRUE)
+   while(TRUE) 
    {
       Theta <- CaptureASThetaOpt(h.seg.dat, wes.f, Theta, verbose=verbose)
       wes.f <- OptimizeCaptureF(h.seg.dat, wes.f, Theta, tol=1e-5, verbose=verbose)
 
       cur.loglik <- CalcCaptureASLogLik(h.seg.dat, wes.f[,"f.hat"], Theta)
-      cond <- abs(cur.loglik - loglik) / abs(cur.loglik)
+      cond <- abs(cur.loglik - loglik) / abs(cur.loglik) 
       loglik <- cur.loglik
 
       if (verbose) {
@@ -101,7 +94,7 @@ CaptureASModelFit = function( h.seg.dat, verbose=FALSE )
          break
       }
       iter <- iter + 1
-   }
+   }      
 
    het.phase.prob = list()
    for( i in 1:n.segs )
@@ -109,25 +102,23 @@ CaptureASModelFit = function( h.seg.dat, verbose=FALSE )
       alt = h.seg.dat[["gh.wes.allele.d"]][[i]]["alt",]
       ref = h.seg.dat[["gh.wes.allele.d"]][[i]]["ref",]
       f.hat = wes.f[i,"f.hat"]
-
       het.phase.prob[[i]] = CapturePhaseProb( alt, ref, f.hat, Theta)
-      print(paste("het.phase.pro ",het.phase.prob[[i]]))
    }
 
    return( list("Theta"=Theta, "wes.f"=wes.f, "het.phase.prob"=het.phase.prob) )
 }
 
 
-CaptureASThetaOpt <- function(h.seg.dat, wes.f, Theta, verbose=FALSE)
+CaptureASThetaOpt <- function(h.seg.dat, wes.f, Theta, verbose=FALSE) 
 {
    LL = function(par)
    {
       Theta[["f_skew"]] = par
       cat("-")
       return( CalcCaptureASLogLik(h.seg.dat, wes.f[,"f.hat"], Theta) )
-   }
+   }      
 
-   if (verbose) print("Optimizing Capture allelic Theta")
+   if (verbose) print("Optimizing Capture allelic Theta")   
 
    res <- optimize(LL, lower=0.6, upper=1, tol=1e-4, maximum=TRUE )
    cat("\n")
@@ -146,18 +137,18 @@ CaptureCNModelFit = function( h.seg.dat, verbose=FALSE )
 
    Theta <- InitCaptureCRTheta(verbose=verbose)
 
-   tau <- CaptureInitTau(h.seg.dat)
+   tau <- CaptureInitTau(h.seg.dat) 
    n.segs <- length(h.seg.dat[["h.capseg.d"]])
    loglik <- -Inf
    iter <- 1
 
-   while(TRUE)
-   {
+   while(TRUE) 
+   {  
       tau <- CaptureOptimizeTau(h.seg.dat, tau, Theta, tol=1e-4, verbose=verbose)
       Theta <- CaptureCNThetaOpt(h.seg.dat, tau, Theta, verbose=verbose)
       cur.loglik <- CalcCaptureCNLogLik(h.seg.dat, tau, Theta)
 
-      cond <- abs(cur.loglik - loglik) / abs(cur.loglik)
+      cond <- abs(cur.loglik - loglik) / abs(cur.loglik) 
       loglik <- cur.loglik
 
       if (verbose) {
@@ -168,25 +159,25 @@ CaptureCNModelFit = function( h.seg.dat, verbose=FALSE )
       if ((iter > min.iter) && ((cond < eps) || (iter >= max.iter))) {
          break
       }
-
+      
       iter <- iter + 1
-   }
+   }      
 
    return( list("Theta"=Theta, "tau"=tau) )
 }
 
 
 
-CaptureCNThetaOpt <- function(h.seg.dat, tau, Theta, verbose=FALSE)
+CaptureCNThetaOpt <- function(h.seg.dat, tau, Theta, verbose=FALSE) 
 {
    LL = function(par)
    {
       Theta[["sigma.scale.capseg"]] = par
       cat("~")
       return( CalcCaptureCNLogLik(h.seg.dat, tau, Theta) )
-   }
+   }      
 
-   if (verbose) print("Optimizing Capture CR Theta")
+   if (verbose) print("Optimizing Capture CR Theta")   
 
    res <- optimize(LL, lower=0, upper=20, tol=1e-4, maximum=TRUE)
    cat("\n")
@@ -199,16 +190,16 @@ CaptureCNThetaOpt <- function(h.seg.dat, tau, Theta, verbose=FALSE)
 
 ## Is this used??
 CapsegThetaOptExtreme <- function(h.seg.dat, delta.tau, out.p, Theta, verbose=FALSE) {
-
-   if (verbose) print("Optimizing Capseg Theta")
+   
+   if (verbose) print("Optimizing Capseg Theta")   
    Theta[["at.capseg"]] <- HThetaOptExtreme(h.seg.dat, delta.tau, out.p, Theta, "at.capseg", list("lower"= 0, "upper"=5), "+", 1e-4, probe.types=c("cap"), verbose=verbose)
    Theta[["sigma.scale.capseg"]] <- HThetaOptExtreme(h.seg.dat, delta.tau, out.p, Theta, "sigma.scale.capseg", list("lower"= 0, "upper"=20), "~", 1e-4, probe.types=c("cap"), verbose=verbose)
    # Theta[["nu.capseg"]] <- HThetaOptExtreme(h.seg.dat, h.e.mu, out.p, Theta, "nu.capseg", list("lower"= 1, "upper"=25), "-", 1e-1, probe.types=c("cap"), verbose=verbose)
-
+   
    return(Theta)
 }
 
-InitCaptureCRTheta <- function(verbose=FALSE)
+InitCaptureCRTheta <- function(verbose=FALSE) 
 {
    if (verbose) print("Initializing Capture-only Theta")
    Theta <- list()
@@ -226,11 +217,11 @@ InitCaptureASTheta = function(verbose=FALSE)
 
 # fit with out.p = 0.001
    Theta[["b"]] = -33.67232
-   Theta[["m"]] = 82.77464
+   Theta[["m"]] = 82.77464  
 
 # fit with out.p = 0.005
 #   Theta[["b"]] = -45.86149
-#   Theta[["m"]] = 110.51106
+#   Theta[["m"]] = 110.51106 
 
    Theta[["f_skew"]] = 0.48 * 2     ## this is the only free param
    Theta[["allelic_out.p"]] = 0.005
@@ -243,7 +234,7 @@ InitCaptureASTheta = function(verbose=FALSE)
 CapturePlatformSpecificOptimizationExtreme <- function(idx, delta.tau, h.seg.dat, out.p, Theta, verbose=FALSE) {
    ## platform specific optimization - the optimization
    ## we do for the affy (and arrays in general)
-
+   
    return(GridstartH1OptMeansExtreme(idx, h.seg.dat, delta.tau, out.p, Theta, verbose=verbose))
 }
 
@@ -256,7 +247,7 @@ F_opt_func <- function( Par, alt, ref, Theta, dom )
 
    if (f < dom[1] | f > dom[2] ) { return(-1e99) }
 
-   ll =  CalcCaptureSegAllelicLogLik(alt, ref, f, Theta )
+   ll =  CalcCaptureSegAllelicLogLik(alt, ref, f, Theta ) 
    if(ll== -Inf) { ll = -1e100}
    return( ll )
 }
@@ -268,7 +259,7 @@ neg_F_opt_func <- function( Par, alt, ref, Theta, dom )
 }
 
 
-InitCaptureF = function( h.seg.dat, Theta )
+InitCaptureF = function( h.seg.dat, Theta ) 
 {
    ## Modify Theta[["allelic_out.p"]] to low tolerance for outliers.  For provisional fitting
    Theta[["allelic_out.p"]] = 0
@@ -310,19 +301,19 @@ InitCaptureF = function( h.seg.dat, Theta )
 
 
 
-OptimizeCaptureF <- function(h.seg.dat, wes.f, Theta, tol=1e-5, verbose=FALSE)
+OptimizeCaptureF <- function(h.seg.dat, wes.f, Theta, tol=1e-5, verbose=FALSE) 
 {
    n.segs = length(h.seg.dat[["gh.wes.allele.d"]])
    prev_f = wes.f[,"f.hat"]
    res = matrix( NA, nrow=n.segs, ncol=3)
    fdom = c(0,0.5)
 
-#   res = foreach(r=1:n.segs, .combine=rbind) %dopar%
+#   res = foreach(r=1:n.segs, .combine=rbind) %dopar% 
    for(r in 1:n.segs)
    {
       # r = 54
       n.hets = ncol(h.seg.dat[["gh.wes.allele.d"]][[r]])
-      if( (n.hets > 0) & (sum(h.seg.dat[["gh.wes.allele.d"]][[r]]) > 0) )
+      if( (n.hets > 0) & (sum(h.seg.dat[["gh.wes.allele.d"]][[r]]) > 0) ) 
       {
          alt <- h.seg.dat[["gh.wes.allele.d"]][[r]]["alt", ]
          ref <- h.seg.dat[["gh.wes.allele.d"]][[r]]["ref", ]
@@ -364,7 +355,7 @@ OptimizeCaptureF <- function(h.seg.dat, wes.f, Theta, tol=1e-5, verbose=FALSE)
 
          res[r,] = c(f.hat=f.hat, p.H0=exp(log.p.H0), p.H1=exp(log.p.H1))
 
-         if( FALSE & verbose)
+         if( FALSE & verbose) 
          {
             cat("Highest Evidence F Model: ")
             if (ev.H0 > ev.H1) cat("H0\n") else cat("H1\n")
@@ -373,20 +364,20 @@ OptimizeCaptureF <- function(h.seg.dat, wes.f, Theta, tol=1e-5, verbose=FALSE)
             print( paste("H0 loglik = ", round(ev.H0,5), sep=""))
             print( paste("H1 opt f loglik = ", round(H1.opt.f.loglik,5), sep=""))
          }
-         if( verbose)
-         {
+         if( verbose) 
+         {  
             if (ev.H0 > ev.H1) cat("0") else cat("1")
-         }
+         }         
 
       }  else {
          res[r,] = c(f.hat=NA, p.H0=NA, p.H1=NA)
       }
    }
 
-  if( verbose)
-  {
+  if( verbose) 
+  {  
      cat("\n")
-  }
+  }         
 
    rownames(res) <- NULL
    colnames(res) = colnames(wes.f)
@@ -397,24 +388,24 @@ OptimizeCaptureF <- function(h.seg.dat, wes.f, Theta, tol=1e-5, verbose=FALSE)
 
 
 
-CaptureOptimizeTau <- function(h.seg.dat, tau, Theta, tol=1e-4, verbose=FALSE)
+CaptureOptimizeTau <- function(h.seg.dat, tau, Theta, tol=1e-4, verbose=FALSE) 
 {
-
+   
    if (verbose) print("Optimizing Tau: ")
    lb <- 0
    LL <- function(par, d, Theta){
-
+      
       par <- max(lb, par)
       tau = par
       CalcCaptureSegTauLogLik(d, tau, Theta)
    }
-
+ 
    n.segs = length(h.seg.dat[["h.capseg.d"]])
    opt.tau = rep(NA, n.segs)
    # for( i in 1:n.segs ) {
-
    #    d <- h.seg.dat[["h.capseg.d"]][[i]]
    #    if (length(as.vector(d)) == 0) return(NA)
+#      if (length(as.vector(d)) == 0) { opt.tau[i] = NA; next }
    #    opt.tau[i] <- optim(par=tau[i], fn=LL, method="L-BFGS-B", lower=0, upper=Inf, control=list(factr=tol, fnscale=-1), d=d, Theta=Theta)[["par"]]
    #    if (verbose) cat(paste(i, sep=""), ".")
    # }
@@ -422,7 +413,7 @@ CaptureOptimizeTau <- function(h.seg.dat, tau, Theta, tol=1e-4, verbose=FALSE)
    opt.tau <- foreach(i=1:n.segs, .combine=c) %dopar% {
    # opt.tau <- sapply(1:n.segs, function(i) {
       d <- h.seg.dat[["h.capseg.d"]][[i]]
-      if (length(as.vector(d)) == 0) return(NA)
+      if (length(as.vector(d)) == 0) { return(NA) }
       opt.tau.i <- optim(par=tau[i], fn=LL, method="L-BFGS-B", lower=lb, upper=Inf, control=list(factr=tol, fnscale=-1), d=d, Theta=Theta)[["par"]]
       if (verbose) cat(paste(i, sep=""), ".")
       return(opt.tau.i)
@@ -438,7 +429,7 @@ CaptureOptimizeTau <- function(h.seg.dat, tau, Theta, tol=1e-4, verbose=FALSE)
 # LL(-4.44089209850063e-16, d, Theta)
 
 
-CaptureInitTau <- function(h.seg.dat)
+CaptureInitTau <- function(h.seg.dat) 
 {
    n.segs = length(h.seg.dat[["h.capseg.d"]])
    tau = rep(NA, n.segs)

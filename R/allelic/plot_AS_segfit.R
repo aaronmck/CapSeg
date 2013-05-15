@@ -30,11 +30,10 @@ PlotSnpSegfit <- function(i, res, min=NULL, max=NULL,  plot=TRUE) {
    delta.tau = res[["array.em.fit"]][["delta.tau"]][i, ]
    mu = AffyGetMeans(delta.tau[1], delta.tau[2])
    theta = res[["array.em.fit"]][["theta"]]
-   array.name = basename(RESULTS.DIR)
    
    if (ncol(h.snp.d) == 0) {
       if (plot) {
-         plot(1, type="n", main = array.name)
+         plot(1, type="n", main = "No Data")
       }
       return(h.snp.d)
    }
@@ -126,11 +125,10 @@ PlotSnpSegfit <- function(i, res, min=NULL, max=NULL,  plot=TRUE) {
 PlotCnSegfit <- function(i, res, min=NULL, max=NULL, plot=T) {
    
    h.cn.d = res[["as.res"]][["h.seg.dat"]][["h.cn.d"]][[i]]
-   array.name = basename(RESULTS.DIR)
    
    if (length(h.cn.d) == 0) {
       if (plot) {
-         plot(1, type="n")
+         plot(1, type="n", main = "No Data")
       }
       return(h.cn.d)
    }
@@ -187,7 +185,6 @@ PlotCnSegfit <- function(i, res, min=NULL, max=NULL, plot=T) {
    }
 }
 
-
 PlotCapsegSegfitBryan <- function(i, res, min=NULL, max=NULL, plot=T) {
    
    # i = 1
@@ -201,7 +198,7 @@ PlotCapsegSegfitBryan <- function(i, res, min=NULL, max=NULL, plot=T) {
    
    if (length(h.d) == 0) {
       if (plot) {
-         plot(1, type="n")
+         plot(1, type="n", main = "No Data")
       }
       return(h.d)
    }
@@ -333,7 +330,6 @@ PlotSnpIntensities <- function(i, res, genomic.limits, intensity.lim, bgl.gt.p=N
    
 }
 
-
 PlotCnIntensities <- function(i, res, genomic.limits, intensity.lim) {
 
    
@@ -381,6 +377,7 @@ PlotCnIntensities <- function(i, res, genomic.limits, intensity.lim) {
 
 PlotCapIntensitiesBryan <- function(i, res, genomic.limits, intensity.lim, use.capseg.mean=FALSE, draw.legend=TRUE, capseg.seg.fn=NULL, capseg.sample.name=NULL) {
    
+
    genomic.limits <- genomic.limits / 1e6
    seg1.col = c("red", "darkred")
    seg2.col = c("blue", "lightblue")   
@@ -447,9 +444,7 @@ PlotCapIntensitiesBryan <- function(i, res, genomic.limits, intensity.lim, use.c
          legend("topright", legend=c("SNP-derived Mu3"), lty=c(1), lwd=3)   
       }
       
-   }
-
-}
+   }}
 
 
 PlotEllipseScatter <- function(x, y, a, b, add=F, ...) {
@@ -794,8 +789,7 @@ PlotSnpAscn <- function(i, res, y.lab="Allelic copy-ratio", xcrds=NA, chr=NA,
    snp.annot = res$as.res$h.seg.dat$h.snp.annot[[i]]
    wes.minor.af = res[["capture.em.fit"]][["wes.f"]][i]
    e.mu.wes = AffyAtten(c(wes.minor.af * mu[3], (1 - wes.minor.af) * mu[3]), theta[["at"]])
-   array.name = basename(RESULTS.DIR)
-   
+
    if (length(d) == 0 ) {
       plot(1, type="n", main=paste("No SNP data in this seg."))
       return(NULL)
@@ -1370,7 +1364,7 @@ PlotAllSegfits <- function(i, res) {
 }
 
 PlotArraySegfits <- function(i, res) {
-   # OpenDev(save=T, fn=file.path(RESULTS.DIR, "new.plots", "all.segfits"), reso=270)
+   
    # i <- 1
    # res <- tot.res
 
@@ -1391,7 +1385,6 @@ PlotArraySegfits <- function(i, res) {
 
 PlotArrayAndCaptureIntensities <- function(i, res, bgl.gt.p=NULL) {
 
-   # OpenDev(save=TRUE, fn=file.path(RESULTS.DIR, "new.plots", "plotall"))
    # res = tot.res
    # i = 1
    # bgl.gt.p <- NULL
@@ -1457,7 +1450,6 @@ PlotArrayAndCaptureIntensities <- function(i, res, bgl.gt.p=NULL) {
 
 PlotArrayIntensities <- function(i, res, bgl.gt.p=NULL) {
 
-   # OpenDev(save=TRUE, fn=file.path(RESULTS.DIR, "new.plots", "plotall"))
    # res = tot.res
    # i = 2
    # bgl.gt.p <- NULL
@@ -1759,7 +1751,7 @@ PlotAll <- function(res, segs=NULL, plots=1:2, main="", save = F, subdir="") {
    
 }
 
-PlotAllCapture <- function(res, save = F, subdir="") 
+PlotAllCaptureBryan <- function(res, save = F, subdir="") 
 {
    CalcIntensityLims <- function(probe.type) 
    {
@@ -1815,8 +1807,8 @@ PlotAllCapture <- function(res, save = F, subdir="")
       PlotCapIntensities(i, res, genomic.limits, ilim, use.capseg.mean=F, draw.legend=F)
       PlotCapsegSegfit(i, res, min=ilim[1], max=ilim[2], plot=T)
       PlotCapsegSegfit(i+1, res, min=ilim[1], max=ilim[2], plot=T)
-      PlotFFit(i, res, conf=.95, plot=T)
-      PlotFFit(i+1, res, conf=.95, plot=T)
+      # PlotFFit(i, res, conf=.95, plot=T)
+      # PlotFFit(i+1, res, conf=.95, plot=T)
 
       Plot_het_AF_vs_cov(i, res)
 
