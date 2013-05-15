@@ -20,7 +20,7 @@ AllelicCapseg = function( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, 
 
 ## Run model-fitting algorithm
       iams.res <- cap.dat
-      iams.res[["em.fit"]] <- CaptureHscrSegFit(cap.dat[["as.res"]][["h.seg.dat"]], tol=1e-5, RESULTS.DIR=RESULTS.DIR, verbose=verbose)
+      iams.res[["em.fit"]] <- CaptureHscrSegFit(cap.dat[["as.res"]][["h.seg.dat"]], tol=1e-5, verbose=verbose)
 
       saveRDS( iams.res, file=result_FN)
    }
