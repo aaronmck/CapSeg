@@ -1,8 +1,19 @@
 
 AllelicCapseg = function( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, base.output.dir, min.seg.size, drop.x, drop.y,  verbose=FALSE )
 {
+  # capseg.probe.fn <- "/xchip/cga/gdac-prod/cga/jobResults/CapSegModule/An_GBM_Native/1856810/0.CapSegModule.Finished/signal/GBM-02-0003.tsv"
+  # capseg.seg.fn <- "/xchip/cga/gdac-prod/cga/jobResults/CapSegModule/An_GBM_Native/1856810/0.CapSegModule.Finished/segments/GBM-02-0003.seg.txt"
+  # germline.het.fn <- "/xchip/cga2/bryanh/HAPSEG/PanCancer.tumorAlleleCountsAtGermlineHetSites.ByIndividual/GBM-02-0003-Tumor.cov"
+  # SID <- "GBM-02-0003"
+  # base.output.dir <- "/xchip/cga2/bryanh/HAPSEG/hapseg_extreme//GBM/TRIBE_p_TCGAaffx_B1_2_GBM_Nsp_GenomeWideSNP_6_A05_155780"
+  # min.seg.size <- 10
+  # drop.x <- FALSE
+  # drop.y <- TRUE
+  # verbose=TRUE
+
    RESULTS.DIR=file.path(base.output.dir, "results" ); dir.create(RESULTS.DIR, recurs=TRUE, showWarnings=FALSE)
    plots.dir=file.path(base.output.dir, "plots", SID ); dir.create(plots.dir, recurs=TRUE, showWarnings=FALSE)
+
 
    result_FN = file.path(base.output.dir, paste(SID, ".AllelicCapseg.rds", sep="") )
 
@@ -20,20 +31,19 @@ AllelicCapseg = function( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, 
 
 ## Run model-fitting algorithm
       iams.res <- cap.dat
-      iams.res[["em.fit"]] <- CaptureHscrSegFit(cap.dat[["as.res"]][["h.seg.dat"]], tol=1e-5, verbose=verbose)
+      iams.res[["capture.em.fit"]] <- CaptureHscrSegFit(cap.dat[["as.res"]][["h.seg.dat"]], tol=1e-5, verbose=verbose)
 
-      saveRDS( iams.res, file=result_FN)
-   }
-   else
+      saveRDS( iams.res, file=result_FN)  
+   } else
    {
-      iams.res = readRDS(result_FN)
+      iams.res = readRDS(result_FN) 
    }
 
-## Save output
+## Save output 
    out.tab <- AbsolutePostProcess(iams.res, seg.dat)
    write.tab(out.tab, file=file.path(RESULTS.DIR, paste(SID, ".tsv", sep="")) )
 
-## Plotting ##
+## Plotting ## 
    # images are automatically saved in RESULTS.DIR / plots / subdir
    PlotAllCapture(iams.res, save=TRUE, plots.dir )
 }
