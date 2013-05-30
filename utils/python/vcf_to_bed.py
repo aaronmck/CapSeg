@@ -82,9 +82,12 @@ for key,value in normal_sample_to_bam.iteritems():
     if not normal_bam_to_ind.has_key(value):
         raise NameError("Unable to map the normal sample " + key + " to a individual")
     ind = normal_bam_to_ind[value]
-    final_normal_sample_to_ind[key] = ind
-
     tumor_bam = normal_bam_to_tumor_bam[value]
+
+    if tumor_bam == "NA" or value == "NA":
+        continue
+
+    final_normal_sample_to_ind[key] = ind
     if not tumor_bam_to_sample.has_key(tumor_bam):
         raise NameError("Unable to map the tumor bam " + tumor_bam + " to a tumor sample")
     final_normal_sample_to_tumor_sample[key] = tumor_bam_to_sample[tumor_bam]
