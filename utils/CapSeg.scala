@@ -198,7 +198,6 @@ class CapSeg extends QScript {
 
       val output = alleleFreq + "/" + sample + ".acov"
       alleleOutput ::= output
-      // now figure out what the normal BED file is called
 
       add(new SegmentSample(libraryDir,
                             new File(tumor).getName,
@@ -209,13 +208,11 @@ class CapSeg extends QScript {
                             segmentSplits,
                             segmentSD))
 
-      // if we have a normal sample, pull down the
-      val bedfile = alleleFreq + "/" + sample + ".bed"
-      alleleBalance(tumor, bedfile, dbsnp, output, depFile, reference)
-
       // now check to ensure that this tumor has a normal sample associated with it
-      if (sampleObj.checkBothTumorNormal(sample))
+      if (sampleObj.checkForTumorNormalBamsAndVCF(sample)) {
+        alleleBalance(tumor, bedfile, dbsnp, output, depFile, reference)
         add(new AllelicCapSeg(signalFile, outAllelicDir, segmentFile, output, tumor, srcDir, libraryDir, tumorBamToSampleFile))
+      }
 
       signal ::= signalFile
       sampleToSignal.write(sample + "\t" + signalFile.getAbsolutePath + "\n")
@@ -260,14 +257,23 @@ class CapSeg extends QScript {
   }
 
   // get allelic information at the target het sites in a sample
-  def alleleBalance(bam: File, bed: File, dbSNP: File, output: File, dep: File, ref: File) = {
+  def alleleBalance(tumorBam: File, normalBam: File, vcf: File, dbSNP: File, output: File, dep: File, ref: File) = {
     val aBal = new AlleleCountWalker
-    aBal.input_file :+= bam
+    // put in the tagged bam files
+    var bams: List[File] = Nil
+    vcfs :+= tumorBam
+    vcfs :+= normalBam
+
+    var bamNames: List[String] = Nil
+    vcfNames :+= "tumor"
+    vcfNames :+= "normal"
+
+    aBal.input_file = bamNames.zip(bams).map { case (name, file) => TaggedFile(name,bam,file) }
     aBal.DbSNP = dbSNP
     aBal.calls = bed
     aBal.allelebalance = output
     aBal.intervals :+= bed
-    aBal.dependency = dep
+    aBal.
     aBal.reference_sequence = reference
     add(aBal)
   }
@@ -410,22 +416,6 @@ class PostProcessBaitCoverage(inputFile: File, targets: File, outputFile: File, 
 
   def commandLine = "Rscript %s/R/proportional_coverage.R --input.file %s --intervals %s --output.file %s --output.cr.stat.file %s --output.column.sums %s".format(loc.getAbsolutePath(),inputCSV.getAbsolutePath(),targetFile.getAbsolutePath(),outputCSV.getAbsolutePath(),outputCR.getAbsolutePath(),outputCS.getAbsolutePath())
 }
-
-// given a VCF file, split out a BED file for each of the samples into the specified directory
-class VCFToBED(vcfFile: File, outputDir: File, normalBamToSample: File, tumorBamToSample: File, individualMapping: File, utilityLoc: File, outputFile: File, sexCalls: File) extends CommandLineFunction {
-  @Input(doc = "the VCF input file") var vcf = vcfFile
-  @Input(doc = "the output directory to put the BED files in") var out = outputDir
-  @Input(doc = "the mapping of normal BAM files to their sample name in BAM file") var nmap = normalBamToSample
-  @Input(doc = "the mapping of individual to its normal and tumor bam files") var imap = individualMapping
-  @Input(doc = "the mapping of tumor BAM files to their sample names ") var tmap = tumorBamToSample
-  @Output(doc = "the final csv output file") var outFile = outputFile
-  @Output(doc = "the sex calls for each tumor sample name") var sCalls = sexCalls
-  @Argument(doc = "where to find the scripts (we add the utils/python/ to this path)") var loc = utilityLoc
-  memoryLimit = Some(2)
-
-  def commandLine = "python %s/utils/python/vcf_to_bed.py --vcf %s --outputdir %s -nmap %s -tmap %s -imap %s -sf %s".format(loc.getAbsolutePath(),vcf.getAbsolutePath(),outputDir.getAbsolutePath(),nmap.getAbsolutePath(),tmap.getAbsolutePath(),imap.getAbsolutePath(), sCalls.getAbsolutePath());
-}
-
 
 // get allelic capseg data
 class AllelicCapSeg(probeFL: File, outputDir: File, segmentFile: File, covFile: File, bamName: File, codeDir: File, baseScript: File, bamToSmp: File) extends CommandLineFunction {
