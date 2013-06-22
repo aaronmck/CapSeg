@@ -31,8 +31,7 @@ option.list <- list(
                make_option(c("--bam.file.listing"),help="the listing of bam files, by tumor and by normal",default="blank"),
                make_option(c("--signal.files"),help="the sample name to signal file",default="blank"),
                make_option(c("--use.histo.data"),help="should we use historical data",default="blank"),
-               make_option(c("--debug"),help="dump lots of debugging data to the <output_dir>/debug directory",default="blank"),
-               make_option(c("--sex.calls"),help="the sex chromosome assignment",default="blank")
+               make_option(c("--debug"),help="dump lots of debugging data to the <output_dir>/debug directory",default="blank")
 )
 opt <- parse_args(OptionParser(option_list=option.list))
 
@@ -80,7 +79,7 @@ normal.to.bam                   <- args$normal.to.bam
 signal.files                    <- args$signal.files
 use.histo.data                  <- toupper(args$use.histo.data) == "TRUE"
 debug                           <- toupper(args$debug) == "TRUE"
-sex.calls                       <- args$sex.calls
+# sex.calls                       <- args$sex.calls
 vcf.calls.file                  <- args$call.database
 
 

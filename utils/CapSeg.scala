@@ -55,9 +55,6 @@ class CapSeg extends QScript {
   @Argument(doc = "what to call this analysis set", shortName = "asn", required = true)
   var analysisSet: String = _
 
-  @Input(doc = "the VCF file with calls for the normal tissue sample in our set", shortName = "vcf", required = true)
-  var vcfFile: File = _
-
   @Input(doc = "dbSNP file; used to order the SNPs in the allele coverage pulldown list ", shortName = "dbsnp", required = true)
   var dbsnp: File = _
 
@@ -180,11 +177,6 @@ class CapSeg extends QScript {
     val alleleFreq = new File(outputDir + "/alleleFreq/")
     alleleFreq.mkdir();
 
-    // create a list of the output files, one bed for each output
-    val depFile = new File(alleleFreq + "/complete.marker")
-    val sexFile = new File(alleleFreq + "/sex.calls")
-    add(new VCFToBED(vcfFile, alleleFreq, normalBamToSampleFile, tumorBamToSampleFile, samples, libraryDir, depFile, sexFile))
-
     var srcDir = new File(libraryDir.getAbsolutePath() + "/R/allelic/")
     var outAllelicDir = new File(outputDir + "/allelicCapSeg/")
     var alleleOutput = List[File]()
@@ -192,6 +184,7 @@ class CapSeg extends QScript {
     // for each of the tumor samples, create segments, and for those samples with associated normal tissue,
     // run allelic CapSeg
     var normalMap = sampleObj.getNormalMap
+    var vcfMap = sampleObj.getVCFMap
     for ((sample, tumor) <- sampleObj.getTumorMap) {
       val signalFile = new File(outputDir.getAbsolutePath() + "/signal/" + sample + ".tsv")
       val segmentFile = new File(outputDir.getAbsolutePath() + "/segments/" + sample + ".seg.txt")
@@ -210,7 +203,7 @@ class CapSeg extends QScript {
 
       // now check to ensure that this tumor has a normal sample associated with it
       if (sampleObj.checkForTumorNormalBamsAndVCF(sample)) {
-        alleleBalance(tumor, bedfile, dbsnp, output, depFile, reference)
+        alleleBalance(tumor, normalMap(sample), vcfMap(sample), dbsnp, output, reference)
         add(new AllelicCapSeg(signalFile, outAllelicDir, segmentFile, output, tumor, srcDir, libraryDir, tumorBamToSampleFile))
       }
 
@@ -240,8 +233,7 @@ class CapSeg extends QScript {
                             signal,
                             signalFile,
                             useHistData,
-                            alleleOutput,
-                            sexFile))
+                            alleleOutput))
   }
 
   // sample to lane walker
@@ -257,23 +249,22 @@ class CapSeg extends QScript {
   }
 
   // get allelic information at the target het sites in a sample
-  def alleleBalance(tumorBam: File, normalBam: File, vcf: File, dbSNP: File, output: File, dep: File, ref: File) = {
+  def alleleBalance(tumorBam: File, normalBam: File, vcf: File, dbSNP: File, output: File, ref: File) = {
     val aBal = new AlleleCountWalker
     // put in the tagged bam files
     var bams: List[File] = Nil
-    vcfs :+= tumorBam
-    vcfs :+= normalBam
+    bams :+= tumorBam
+    bams :+= normalBam
 
     var bamNames: List[String] = Nil
-    vcfNames :+= "tumor"
-    vcfNames :+= "normal"
+    bamNames :+= "tumor"
+    bamNames :+= "normal"
 
-    aBal.input_file = bamNames.zip(bams).map { case (name, file) => TaggedFile(name,bam,file) }
+    aBal.input_file = bamNames.zip(bams).map { case (name, file) => TaggedFile(file,name) }
     aBal.DbSNP = dbSNP
-    aBal.calls = bed
+    aBal.calls = vcf
     aBal.allelebalance = output
-    aBal.intervals :+= bed
-    aBal.
+    aBal.intervals :+= vcf
     aBal.reference_sequence = reference
     add(aBal)
   }
@@ -373,7 +364,7 @@ class SegmentSample(libraryDir: File, bamName: String, bamToSample: File, output
 class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_coverage: File, target_file: File,
                       useCachedData: Boolean, cachedLocation: File, sToRGFileNormals: File, sToRGFileTumors: File,
                       outputDir: File, tangentLocation: File, tangentOutputLocation: File, buildType: String, analysisSet: String,
-                      byLane: Boolean, normalBaitFile: File, signalFLs: List[File], signalTSV: File, histoData: Boolean, acovFiles: List[File], sexFl: File) extends CommandLineFunction {
+                      byLane: Boolean, normalBaitFile: File, signalFLs: List[File], signalTSV: File, histoData: Boolean, acovFiles: List[File]) extends CommandLineFunction {
   @Input(doc = "the normal bait output file") var normalFile = normal_bait_coverage
   @Input(doc = "the tumor bait output file") var tumorFile = tumor_bait_coverage
   @Input(doc = "the target list") var targetFile = target_file
@@ -385,7 +376,6 @@ class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_c
   @Input(doc = "tangent normalization database location") var tangentOutputDatabase = tangentOutputLocation
   @Input(doc = "signal tsv file") var signalTSVFile = signalTSV
   @Input(doc = "coverage files from the allele balance pulldown") var coverageFiles = acovFiles
-  @Input(doc = "information about the sex of every sample") var sexInfo = sexFl
 
   @Output(doc = "the signal file outputs") var signalFiles = signalFLs
   @Output(doc = "the cache location") var cacheLocation = cachedLocation
@@ -400,7 +390,7 @@ class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_c
 
   @Argument(doc = "should we use the cache file") var useCache = useCachedData
   memoryLimit = Some(16) // change me
-  def commandLine = "Rscript %s/R/tangent_normalize.R --normal.lane.data %s --tumor.lane.data %s --target.list %s --use.cache %s --cache.location %s --script.dir %s --normal.sample.to.lanes.file %s --tumor.sample.to.lanes.file %s --output.location %s --tangent.database.location %s --output.tangent.database %s --build %s --analysis.set.name %s --bylane %s --bait.factor %s --signal.files %s --histo.data %s --sex.calls %s".format(libDir.getAbsolutePath(), normalFile.getAbsolutePath(), tumorFile.getAbsolutePath(), targetFile.getAbsolutePath(), useCache, cacheLocation.getAbsolutePath(), libDir.getAbsolutePath(), normalSampleToReadGroupFile.getAbsolutePath(), tumorSampleToReadGroupFile.getAbsolutePath(), outputDirectory.getAbsolutePath(), tangentDatabase.getAbsolutePath(), tangentOutputDatabase.getAbsolutePath(), build, analysisSetName,byLaneData, nbf.getAbsolutePath(), signalTSVFile.getAbsolutePath(), uhd, sexFl.getAbsolutePath())
+  def commandLine = "Rscript %s/R/tangent_normalize.R --normal.lane.data %s --tumor.lane.data %s --target.list %s --use.cache %s --cache.location %s --script.dir %s --normal.sample.to.lanes.file %s --tumor.sample.to.lanes.file %s --output.location %s --tangent.database.location %s --output.tangent.database %s --build %s --analysis.set.name %s --bylane %s --bait.factor %s --signal.files %s --histo.data %s".format(libDir.getAbsolutePath(), normalFile.getAbsolutePath(), tumorFile.getAbsolutePath(), targetFile.getAbsolutePath(), useCache, cacheLocation.getAbsolutePath(), libDir.getAbsolutePath(), normalSampleToReadGroupFile.getAbsolutePath(), tumorSampleToReadGroupFile.getAbsolutePath(), outputDirectory.getAbsolutePath(), tangentDatabase.getAbsolutePath(), tangentOutputDatabase.getAbsolutePath(), build, analysisSetName,byLaneData, nbf.getAbsolutePath(), signalTSVFile.getAbsolutePath(), uhd)
 }
 
 // correct the output files for any dups lines and extra headers
@@ -476,21 +466,24 @@ class DoubleTriggerDeleteMeFunction extends CommandLineFunction {
 }
 
 // our sample files - get tumor normal pairs
-class TumorNormalFile(inputFile: String) extends ReadDelimitedFile(inputFile, "\t", true, "sample\ttumor_bam\tnormal_bam\n") {
+class TumorNormalFile(inputFile: String) extends ReadDelimitedFile(inputFile, "\t", true, "sample\ttumor_bam\tnormal_bam\tvcf_file\n") {
   var tBamFiles = Map.empty[String, File]
   var nBamFiles = Map.empty[String, File]
+  var vcfFiles = Map.empty[String, File]
   for (line <- rows) {
     var sp = line.split(delim)
     //println(sp.length)
-    if (sp.length >= 3 && sp(0) != null && sp(1) != null && sp(2) != null) {
+    if (sp.length >= 4 && sp(0) != null && sp(1) != null && sp(2) != null) {
       if (!sp(1).equals("NA") && !sp(1).equals("")) {
         tBamFiles += sp(0) -> new File(sp(1))
-        //println("tumor")
       }
       if (!sp(2).equals("NA") && !sp(2).equals("")) {
         nBamFiles += sp(0) -> new File(sp(2))
-        //println("normal")
       }
+      if (!sp(3).equals("NA") && !sp(3).equals("")) {
+        vcfFiles += sp(0) -> new File(sp(3))
+      }
+
     } else {
       throw new IllegalArgumentException("Unable to properly split line " + line)
     }
@@ -517,6 +510,12 @@ class TumorNormalFile(inputFile: String) extends ReadDelimitedFile(inputFile, "\
     return (nBamFiles)
   }
 
+  // get the vcfs as a map to name from file
+  def getVCFMap(): Map[String, File] = {
+    return (vcfFiles)
+  }
+
+
   def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit) {
     val p = new java.io.PrintWriter(f)
     try { op(p) } finally { p.close() }
@@ -533,11 +532,11 @@ class TumorNormalFile(inputFile: String) extends ReadDelimitedFile(inputFile, "\
     })
   }
 
-  def checkBothTumorNormal(tumorSample: String): Boolean = {
+  def checkForTumorNormalBamsAndVCF(tumorSample: String): Boolean = {
     // check that we have the sample.  If we do, check that we have
-    // both a tumor and a normal bam file. If so return true, otherwise
+    // a tumor and normal bam file and a VCF file. If so return true, otherwise
     // false
-    if ((getTumorMap() contains tumorSample) && (getNormalMap() contains tumorSample)) {
+    if ((getTumorMap() contains tumorSample) && (getNormalMap() contains tumorSample) && (vcfFiles contains tumorSample)) {
       return true
     }
     return false
