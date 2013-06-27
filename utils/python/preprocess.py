@@ -135,10 +135,10 @@ for key,value in nmap.iteritems():
                 print("unable to find an appropriate number of samples from " + value + "; dropping")
         else:
                 # check that the sample is in the VCF
-                if normal_samples != None and normal_samples.itervalues().next() in vcf_samples:
+                if normal_samples != None and normal_samples.keys()[0] in vcf_samples:
                         normal_sample_to_vcf[key] = args.vcf
                 elif normal_samples != None:
-                        print "Nothing for " + normal_samples.itervalues().next()
+                        print "Nothing for " + normal_samples.keys()[0]
 
 
 
