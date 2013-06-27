@@ -89,7 +89,7 @@ tumor_bam_files = []
 # load up the tumors and the normals from the input lists from Firehose
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 for line in normals:
-	sp = line.strip().split()
+	sp = line.strip().split("\t")
 	if len(sp) > 1 and os.path.exists(sp[1]):
 		sm = sp[0].rstrip("-Normal")
 		if nmap.has_key(sm) or sp[1] in normal_bam_files:
@@ -101,7 +101,7 @@ for line in normals:
 		print "Doesn't exist " + sp[1]
 
 for line in tumors:
-	sp = line.strip().split()
+	sp = line.strip().split("\t")
 	if len(sp) > 1 and os.path.exists(sp[1]):
 		sm = sp[0].rstrip("-Tumor")
 		if tmap.has_key(sm) or sp[1] in tumor_bam_files:
