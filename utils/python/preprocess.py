@@ -52,7 +52,7 @@ def getBAMSamples(input_file):
 	while 1:
 		line = p.readline()
 		if not line: break
-		sp = line.split()
+		sp = line.split("\t")
 		for token in sp:
 			if token.startswith("SM"):
 				samples[token.split(":")[1]] = file
