@@ -46,7 +46,7 @@ def getBAMSamples(input_file):
             a list of sample names found, or if no samples are found or the file doesn't exist, None
         """
 	samples = {}
-        if not os.path.exists(file):
+        if not os.path.exists(input_file):
                 return None
 	p = os.popen('samtools view -H ' + file + ' | grep "@RG"',"r")
 	while 1:
@@ -68,7 +68,7 @@ def getVCFSamples(input_file):
             a list of sample names found, or if no samples are found or the file doesn't exist, None
         """
 	samples = {}
-        if not os.path.exists(file):
+        if not os.path.exists(input_file):
                 return None
 	p = open(input_file,"r")
         for line in p:
