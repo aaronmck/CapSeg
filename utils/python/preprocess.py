@@ -48,7 +48,7 @@ def getBAMSamples(input_file):
 	samples = {}
         if not os.path.exists(input_file):
                 return None
-	p = os.popen('samtools view -H ' + file + ' | grep "@RG"',"r")
+	p = os.popen('samtools view -H ' + input_file + ' | grep "@RG"',"r")
 	while 1:
 		line = p.readline()
 		if not line: break
