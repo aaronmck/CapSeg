@@ -11,12 +11,12 @@ BAM files into segmented copy number calls.
 Prerequisites installed on the machine are:
   - Java 1.6.anything; Java 1.7 is not yet supported
   - Python 2.7+ (Python 3.X is not yet supported)
-  - R 2.12 or greater, including the following packages:
+  - R 3.0 or greater, including the following packages:
       - optparse
       - DNAcopy
       - plyr
       - corpcor
-
+  - Samtools (any version should do)
 Versions
 --------
 
