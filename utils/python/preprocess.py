@@ -135,7 +135,7 @@ for key,value in nmap.iteritems():
                 print("unable to find an appropriate number of samples from " + value + "; dropping")
         else:
                 # check that the sample is in the VCF
-                if normal_samples[0] in vcf_samples:
+                if normal_samples != None and normal_samples[0] in vcf_samples:
                         normal_sample_to_vcf[key] = args.vcf
 
 
