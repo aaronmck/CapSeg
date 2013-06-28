@@ -22,8 +22,6 @@ parser.add_argument('-o', '--output',help="the output file",required=False)
 
 args = parser.parse_args()
 
-# run the command:
-# samtools view -H /seq/picard_aggregation/C335/CW84S/v2/CW84S.bam | grep "@RG"
 normals = open(args.normal,"r")
 tumors = open(args.tumor,"r")
 
@@ -31,6 +29,11 @@ tumors = open(args.tumor,"r")
 nmap = {}
 tmap = {}
 
+# output what we have
+print("Tumor input parameter " + args.tumor)
+print("Normal input parameter " + args.normal)
+print("VCF input parameter " + args.vcf)
+print("output input parameter " + args.output)
 
 # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 # helper function section
