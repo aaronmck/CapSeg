@@ -1,4 +1,4 @@
-CalcAllelicSegSEMs <- function(h.seg.dat, f.hat, f.p.H0, tau, Theta)
+CalcAllelicSegSEMs <- function(h.seg.dat, f.hat, f.p.H0, tau, Theta) 
 {
    # h.seg.dat <- cap.res[["as.res"]][["h.seg.dat"]]
    # f.hat <- F[, "f.hat"]
@@ -12,30 +12,29 @@ CalcAllelicSegSEMs <- function(h.seg.dat, f.hat, f.p.H0, tau, Theta)
 
    ab = CalcExpectedAlphaBeta(h.seg.dat, f.hat, Theta)
    for(i in 1:n.seg ) {
-      # i = 1;
+      # i = 1; 
       d = h.seg.dat[["h.capseg.d"]][[i]]
+      if (length(d) < 2 ) {
+
+         result[i,] = c(NA, NA, NA)
+         next
+      } 
 
       sigma <- tau[i] * Theta[["sigma.scale.capseg"]]
       mu.hat = tau[i]
 
-## TODO: refactor ?
-      loglik <- function(x) sapply(x, function(n) sum(dnorm(d, mean=n, sd=sigma, log=T)))
-
+      ## TODO: refactor ?
+      loglik <- function(x) sapply(x, function(n) sum(dnorm(d, mean=n, sd=sigma, log=TRUE)))
+      
       C = -hessian(loglik, c(tau[i]), "Richardson")[1]
-      sigma.mu = C^(-1/2)
-
-      if (length(d) < 2 ) {
-
-         result[i,] = c(NA, NA, sigma.mu)
-         next
-      }
+      sigma.mu = C^(-1/2) 
 
       if (is.na(f.hat[i])) {
          result[i,] = c(NA, NA, sigma.mu)
          next
       }
-
-      ## Then calc e.mu[1] and e.mu[2] using e.mu[3], f, and 1-f, and calc their error bars.
+      
+      ## Then calc e.mu[1] and e.mu[2] using e.mu[3], f, and 1-f, and calc their error bars. 
       ## Gaussian approximation
       n <- 10000
       n.H0 <- round(n * f.p.H0[i])
@@ -43,13 +42,13 @@ CalcAllelicSegSEMs <- function(h.seg.dat, f.hat, f.p.H0, tau, Theta)
       H1.f.sample <- rbeta(n - n.H0, ab$alpha[i], ab$beta[i])
       f.sample <- c(H0.f.sample, H1.f.sample)[sample.int(n, n)] # mix up sample
       tau.sample <- rnorm(n, mean=mu.hat, sd=sigma.mu)
-      sample.minor <- f.sample * tau.sample
+      sample.minor <- f.sample * tau.sample 
       sample.major <- (1 - f.sample) * tau.sample
 #      mu.minor <- mean(sample.minor)
 #      mu.major <- mean(sample.major)
       sigma.minor <- sd(sample.minor)
       sigma.major <- sd(sample.major)
-
+      
       result[i,] = c(sigma.minor, sigma.major, sigma.mu)
    }
    rownames(result) <- NULL
@@ -58,18 +57,18 @@ CalcAllelicSegSEMs <- function(h.seg.dat, f.hat, f.p.H0, tau, Theta)
 
 
 
-CalcExpectedAlphaBeta <- function(h.seg.dat, f.hat, Theta) {
+CalcExpectedAlphaBeta <- function(h.seg.dat, f.hat, Theta) { 
 
    foreach (i=1:length(h.seg.dat[["gh.wes.allele.d"]]), .combine=rbind) %dopar% {
 
       d = h.seg.dat[["gh.wes.allele.d"]][[i]]
-
+      
       alt.phase.prob = CapturePhaseProb( alt=d["alt",], ref= d["ref",], f.hat[i], Theta)[,1]
       e.alpha.seg = 1 + sum(d["alt",] * alt.phase.prob) + sum(d["ref",] * (1 - alt.phase.prob))
       e.beta.seg = 1 + sum(d["ref",] * alt.phase.prob) + sum(d["alt",] * (1 - alt.phase.prob))
       data.frame(alpha=e.alpha.seg, beta=e.beta.seg, stringsAsFactors=F)
    }
-
+   
 }
 
 CalcCaptureFErrorBars <- function(h.seg.dat, f.hat, conf=.95) {
@@ -82,7 +81,7 @@ CalcCaptureFErrorBars <- function(h.seg.dat, f.hat, conf=.95) {
    return(eb)
 }
 
-CapturePhaseProb <- function(alt, ref, f, Theta)
+CapturePhaseProb <- function(alt, ref, f, Theta) 
 {
    mat = CaptureAllelicLoglikMat( alt, ref, f, Theta )
    probs = exp(mat - LogAdd( mat ))
@@ -111,10 +110,10 @@ CaptureAllelicLoglikMat = function( alt, ref, f, Theta )
    lik2 =  log(1/2) + log(1-out.p) + d_beta_binom(alt, A2, B2, cov, log=TRUE)
 
 ## ideal model for unbiased data (WGS?)
-## This is equivalent to above with lim rho -> Inf, f_skew=1
+## This is equivalent to above with lim rho -> Inf, f_skew=1 
    # lik1 = log(1/2) + log(1-out.p) + dbinom(alt, cov, f, log=TRUE)
    # lik2 =  log(1/2) + log(1-out.p) + dbinom(alt, cov, 1-f, log=TRUE)
-
+   
    outlier = log(out.p )  ## uniform outlier model
    mat = cbind(lik1, lik2, outlier)
 
@@ -133,7 +132,7 @@ CalcCaptureSegAllelicLogLik <- function(alt, ref, f, Theta )
 }
 
 
-CalcCaptureASLogLik <- function(h.seg.dat, f, Theta)
+CalcCaptureASLogLik <- function(h.seg.dat, f, Theta) 
 {
    n.segs <- length(h.seg.dat[["gh.wes.allele.d"]])
    ll <- sapply(1:n.segs, function(i) {
@@ -141,12 +140,12 @@ CalcCaptureASLogLik <- function(h.seg.dat, f, Theta)
          alt = d["alt",]
          ref = d["ref",]
          CalcCaptureSegAllelicLogLik(alt, ref, f[i], Theta)
-   })
+   })      
    return(sum(ll))
 }
 
 
-CalcCaptureSegTauLogLik <- function(d, tau, Theta)
+CalcCaptureSegTauLogLik <- function(d, tau, Theta) 
 {
    if (length(d) == 0 ) return(0)
    # Gaussian Model
@@ -156,15 +155,15 @@ CalcCaptureSegTauLogLik <- function(d, tau, Theta)
 
    lik = log(1 - out.p) + dnorm(d, atten.mu3, sigma, log=TRUE)
    outlier = rep(log(out.p * ( 1 / 5 ) ), length(lik))  ## outlier model is uniform on [0-5]?
-
+   
    # Scaled T-Distribution Model
    # lik = log(1 - out.p) + d_scaled_t(d, e.mu[3], Theta[["sigma.scale.capseg"]], Theta[["nu.capseg"]], log=TRUE)
    # outlier = rep(log(out.p * (1 / 5)), length(lik))
-
+   
    mat = cbind(lik[1,], unlist(outlier))
    ll = sum(LogAdd(mat))
    if(is.nan(ll)) { ll = -Inf }
-
+  
    return(ll)
 }
 
@@ -174,8 +173,8 @@ CalcCaptureCNLogLik <- function(h.seg.dat, tau, Theta) {
    ll <- sapply(1:n.segs, function(i) {
          d <- h.seg.dat[["h.capseg.d"]][[i]]
          CalcCaptureSegTauLogLik(d, tau[i], Theta)
-   })
-   return(sum(ll[complete.cases(ll)]))
+   })      
+   return(sum(ll, na.rm=TRUE))
 }
 
 

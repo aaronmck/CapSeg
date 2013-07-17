@@ -20,10 +20,9 @@ HscrSegFit <- function(h.seg.dat, theta, eps=1e-5, out.p=1e-3, min.iter=1, max.i
       print(paste("OUT_P is", out.p))
    }
    theta <- AffyInitTheta(h.seg.dat=h.seg.dat, verbose)
-   smms = LoadCached({
-            smms <- SegMeansMSteps(h.seg.dat, out.p, theta, eps, force.diploid, min.iter, max.iter, verbose=verbose)
-            saveRDS (smms, file = file.path(RESULTS.DIR, "smms.res.rds"))
-            smms }, overwrite=TRUE, res.fn = file.path(RESULTS.DIR, "smms.res.rds"), mod.name="SegMeansMStepsArray")
+   
+    smms <- SegMeansMSteps(h.seg.dat, out.p, theta, eps, force.diploid, min.iter, max.iter, verbose=verbose)
+            
    
    theta <- smms[["theta"]]
    h.snp.clust.p <- smms[["h.snp.clust.p"]]
@@ -38,40 +37,6 @@ HscrSegFit <- function(h.seg.dat, theta, eps=1e-5, out.p=1e-3, min.iter=1, max.i
                delta.tau.sd=delta.tau.sd, sigma.h=smms[["sigma.h"]], loglik=smms[["loglik"]],
                seg.log.ev=seg.log.ev, seg.expected.phase=seg.expected.phase,
                theta=theta))
-}
-
-HscrSegFitDEP <- function(h.d, h.snp.gt.p, h.snp.annot, theta,
-                       seg.info, eps=1e-5, out.p=1e-3, 
-                       min.iter=1, max.iter=10,
-                       force.diploid=FALSE, verbose=FALSE) {
-               
-  if (force.diploid) {
-    min.iter = 1
-  }
-
-  if (verbose) {
-    print(paste("OUT_P is", out.p))
-  }
-  
-  smms <- SegMeansMSteps(h.d, out.p, h.snp.gt.p, theta,
-                         eps, force.diploid,
-                         min.iter, max.iter, verbose=verbose)
-  theta <- smms[["theta"]]
-  h.snp.clust.p <- smms[["h.snp.clust.p"]]
-  h.e.mu <- smms[["h.e.mu"]]
-  h.mu.sd <- BuildHMuSd(h.d, h.e.mu, out.p, h.snp.gt.p, theta, verbose=verbose)
-  seg.log.ev <- BuildSegLogEv(h.d, h.snp.gt.p, theta, out.p, h.e.mu,
-                              verbose=verbose)
-  seg.expected.phase <- BuildSegExpectedPhase(length(h.d), h.snp.clust.p)
-
-  ## FIXME: h.snp.gt.p is unchanged in this function and doesn't need to be
-  ## returned. Trace through all calls to this function and fix things such
-  ## that they're not relying on this list's version and then remove from return
-  return(list(snp.clust.p=h.snp.clust.p, h.snp.gt.p=h.snp.gt.p,
-              e.mu=AffyAtten(h.e.mu, theta[["at"]]),
-              mu.post.sd=h.mu.sd, sigma.h=smms[["sigma.h"]], loglik=smms[["loglik"]],
-              seg.log.ev=seg.log.ev, seg.expected.phase=seg.expected.phase,
-              theta=theta))
 }
 
 BuildSegExpectedPhase <- function(n.segs, h.snp.clust.p) {

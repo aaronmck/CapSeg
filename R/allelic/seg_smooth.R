@@ -400,12 +400,13 @@ JoinCloseSegs <- function(h.seg.dat, snp.clust.p, theta, force.diploid, out.p, m
 		
 		m.ix <- which.max(merge.prob[, "merge.prob"]) 
 		if (verbose) {
-			cat(paste("merging #", m.ix, ", prob= ", round(merge.prob[m.ix, 1], 4), ", log10 prob= ", round(merge.prob[m.ix, 2], 4),  
-							",  h0.log.ev.cn= ", round(merge.prob[m.ix, 3], 4), ",  h0.log.ev.snp= ", round(merge.prob[m.ix, 4], 4),
-							",  h1.log.ev.cn= ", round(merge.prob[m.ix, 5], 4), ",  h1.log.ev.snp= ", round(merge.prob[m.ix, 6], 4),
-							",  merge.prob.cn= ", round(merge.prob[m.ix, 7], 4), ",  merge.prob.snp= ", round(merge.prob[m.ix, 8], 4), "\n", sep=""))
+			cat(paste("merging #", m.ix, ", prob= ", signif(merge.prob[m.ix, 1], 4), ", log10 prob= ", signif(merge.prob[m.ix, 2], 4),  
+							",  h0.log.ev.cn= ", signif(merge.prob[m.ix, 3], 4), ",  h0.log.ev.snp= ", signif(merge.prob[m.ix, 4], 4),
+							",  h1.log.ev.cn= ", signif(merge.prob[m.ix, 5], 4), ",  h1.log.ev.snp= ", signif(merge.prob[m.ix, 6], 4),
+							",  merge.prob.cn= ", signif(merge.prob[m.ix, 7], 4), ",  merge.prob.snp= ", signif(merge.prob[m.ix, 8], 4), "\n", sep=""))
 
 		}
+
 		annot <- h.seg.dat[["h.snp.annot"]][[m.ix]]
 		chr <- c(h.seg.dat[["h.snp.annot"]][[m.ix]][["chr"]], h.seg.dat[["h.cn.annot"]][[m.ix]][["chr"]])
 		chr <- ifelse(!all(complete.cases(chr)), max(chr), chr[1])
@@ -424,11 +425,11 @@ JoinCloseSegs <- function(h.seg.dat, snp.clust.p, theta, force.diploid, out.p, m
 		merge.cn.res <- MergeTwoSegsExtreme(m.ix, m.ix + 1, h.seg.dat[["h.cn.d"]], h.seg.dat[["h.cn.annot"]])
 		h.seg.dat[["h.cn.d"]] <- merge.cn.res[["h.d"]]
 		h.seg.dat[["h.cn.annot"]] <- merge.cn.res[["h.probe.annot"]]
-
+		
 		if (!is.null(h.seg.dat[["h.capseg.d"]])) {
 			merge.cap.res <- MergeTwoSegsExtreme(m.ix, m.ix + 1, h.seg.dat[["h.capseg.d"]], h.seg.dat[["h.capseg.annot"]])
-			h.seg.dat[["h.capseg.d"]] <- merge.cn.res[["h.d"]]
-			h.seg.dat[["h.capseg.annot"]] <- merge.cn.res[["h.probe.annot"]]	
+			h.seg.dat[["h.capseg.d"]] <- merge.cap.res[["h.d"]]
+			h.seg.dat[["h.capseg.annot"]] <- merge.cap.res[["h.probe.annot"]]	
 		}
 
 		if (!is.null(h.seg.dat[["gh.wes.allele.d"]])) {
@@ -557,14 +558,6 @@ CalculateH1Evidence <- function(ix.1, ix.2, h.seg.dat, theta, out.p, delta.tau, 
 	return(list(cn=log.ev.cn, snp=log.ev.snp))
 }
 
-CalculateH1EvidenceDEP <- function(ix.1, ix.2, h.d, h.snp.gt.p, theta, out.p, e.mu, verbose=FALSE) {
-  
-  mrg.d <- cbind(h.d[[ix.1]], h.d[[ix.2]])
-  mrg.het.prob <- rbind(h.snp.gt.p[[ix.1]], h.snp.gt.p[[ix.2]])
-
-  return(GetSegLogEv(mrg.d, mrg.het.prob, theta, out.p, e.mu, verbose=verbose)[1])
-}
-
 
 CalculateH0Evidence <- function(ix.1, ix.2, h.seg.dat, theta, out.p, delta.tau, verbose=FALSE) {
 	
@@ -613,18 +606,22 @@ CalculateH1Probs <- function(h0.log.ev, h1.log.ev) {
 
 
 
-GetSegLogEv <- function(idx, h.seg.dat, theta, out.p, delta.tau=NA, verbose=FALSE) {
+GetSegLogEv <- function(idx, h.seg.dat, theta, out.p, delta.tau=NA, record.hessian=FALSE, verbose=FALSE) {
 	
 	het.prob <- h.seg.dat[["h.snp.gt.p"]][[idx]]
 	GetSnpSegLL <- function(x, d, het.prob, theta, out.p) {
-		dist <- x[1]
-		total <- x[2]
 		return(sum(AffyCalcSnpLogLik(d, delta.tau=x, out.p, het.prob, theta)))
 	}
-	
+
+	GetSnpSegLLDelta <- function(x, tau, d, het.prob, theta, out.p) {
+		return(sum(AffyCalcSnpLogLik(d, delta.tau=c(x[1], tau), out.p, het.prob, theta)))
+	}
+
+	GetSnpSegLLTau <- function(x, delta, d, het.prob, theta, out.p) {
+		return(sum(AffyCalcSnpLogLik(d, delta.tau=c(delta, x[1]), out.p, het.prob, theta)))
+	}
 	GetCnSegLL = function(x, d, theta, out.p ) {
-		dist <- x[1]
-		total <- x[2]
+		x <- c(delta=NA, tau=x[1])
 		return(sum(AffyCalcCnLogLik(d, delta.tau=x, out.p, theta) ))
 	}
 	
@@ -646,23 +643,55 @@ GetSegLogEv <- function(idx, h.seg.dat, theta, out.p, delta.tau=NA, verbose=FALS
 	}
 	
 	tau <- delta.tau[2]
-	dist <- delta.tau[1]
+	delta <- delta.tau[1]
 	
 	if (length(h.seg.dat[["h.snp.d"]][[idx]]) != 0) {
-		hess.mat.snp <- hessian(GetSnpSegLL, c(dist, tau), "Richardson", d=h.seg.dat[["h.snp.d"]][[idx]], het.prob=het.prob, theta=theta, out.p=out.p) 
-		curv.snp <- abs(det(hess.mat.snp / (2 * pi)))
-		ll.snp <- GetSnpSegLL(c(dist, tau), h.seg.dat[["h.snp.d"]][[idx]], het.prob, theta, out.p); 
-		log.ev.snp <- ll.snp + (log((curv.snp)^(-1 / 2))) - (log((5 / 2)^2))	
+		
+		# Joint Hessian
+			joint.prior <- (2 / (5^2) ) # note that this is not what's written in the hapseg manuscript as of May 20th 2013.  However, this is the correct prior if 0 <= delta <= tau <= 5.
+			# Laplace
+			hess.mat.snp <- hessian(GetSnpSegLL, c(delta, tau), "Richardson", d=h.seg.dat[["h.snp.d"]][[idx]], het.prob=het.prob, theta=theta, out.p=out.p) 
+			curv.snp <- abs(det(hess.mat.snp / (2 * pi)))
+			ll.snp <- GetSnpSegLL(c(delta, tau), h.seg.dat[["h.snp.d"]][[idx]], het.prob, theta, out.p); 
+			log.ev.snp <- ll.snp + (log((curv.snp)^(-1 / 2))) + log(joint.prior)	   			
+
+		if (record.hessian) {
+		
+		# This is the block of code needed to approximate snp-based evidences by calculating evidences from delta and tau separately, and then combining their results.  It will potentially speed up the run time by not needing to calculate a 2-d hessian, but this hasn't been shown definitively yet.  As the code stands right now, the combined evidence from separating the two parameters, delta and tau, results in a near perfect 2X relationship with the joint evidence calculation.  In other words, log.ev.snp.delta + log.ev.snp.tau ~ 2 * log.ev.snp.  Figuring out what wrong is left to future development.
+		# # Separable Evidences
+		# 	# delta
+		# 	delta.prior <- 1 / tau
+		# 	hess.mat.snp.delta <- hessian(GetSnpSegLLDelta, c(delta), "Richardson", tau=tau, d=h.seg.dat[["h.snp.d"]][[idx]], het.prob=het.prob, theta=theta, out.p=out.p) 
+		# 	curv.snp.delta <- abs(det(hess.mat.snp.delta / (2 * pi)))
+		# 	ll.snp.delta <- GetSnpSegLLDelta(c(delta), tau=tau, h.seg.dat[["h.snp.d"]][[idx]], het.prob, theta, out.p); 
+		# 	log.ev.snp.delta <- ll.snp.delta + (log((curv.snp.delta)^(-1 / 2))) + log(delta.prior)
+
+		# 	# tau
+		# 	tau.prior <- 1 / 5
+		# 	hess.mat.snp.tau <- hessian(GetSnpSegLLTau, c(tau), "Richardson", delta=delta, d=h.seg.dat[["h.snp.d"]][[idx]], het.prob=het.prob, theta=theta, out.p=out.p) 
+		# 	curv.snp.tau <- abs(det(hess.mat.snp.tau / (2 * pi)))
+		# 	ll.snp.tau <- GetSnpSegLLTau(c(tau), delta=delta, h.seg.dat[["h.snp.d"]][[idx]], het.prob, theta, out.p); 
+		# 	log.ev.snp.tau <- ll.snp.tau + (log((curv.snp.tau)^(-1 / 2))) + log(tau.prior)
+
+		
+			# RecordHessian(hess.mat.snp, delta.hat=delta, tau.hat=tau, file=file.path(RESULTS.DIR, "snp.hessian.tsv"))
+			RecordSnpEv(file = file.path(RESULTS.DIR, "snp.ev.comparisons.tsv"), ll.snp, log.ev.snp, ll.snp.delta, log.ev.snp.delta, ll.snp.tau, log.ev.snp.tau)
+		}
 	} else {
 		ll.snp <- 0
 		log.ev.snp <- 0
 	}
 	
 	if (length(h.seg.dat[["h.cn.d"]][[idx]]) != 0) {
-		hess.mat.cn <- hessian(GetCnSegLL, c(dist, tau), "Richardson", d=h.seg.dat[["h.cn.d"]][[idx]], theta=theta, out.p=out.p) 
+		# hess.mat.cn <- hessian(GetCnSegLL, c(delta, tau), "Richardson", d=h.seg.dat[["h.cn.d"]][[idx]], theta=theta, out.p=out.p) 
+		hess.mat.cn <- hessian(GetCnSegLL, c(tau), "Richardson", d=h.seg.dat[["h.cn.d"]][[idx]], theta=theta, out.p=out.p)  # Don't need to differentiate wrt delta
 		curv.cn <- abs(det(hess.mat.cn / (2 * pi)))
-		ll.cn <- GetCnSegLL(c(dist, tau), h.seg.dat[["h.cn.d"]][[idx]], theta, out.p); 
+		ll.cn <- GetCnSegLL(c(delta, tau), h.seg.dat[["h.cn.d"]][[idx]], theta, out.p); 
 		log.ev.cn <- ll.cn + (log((curv.cn)^(-1 / 2))) - log(5)
+
+		if (record.hessian) {
+			# RecordHessian(hess.mat.cn, delta.hat=delta, tau.hat=tau, file=file.path(RESULTS.DIR, "cn.hessian.tsv"))
+		}
 	} else {
 		ll.cn <- 0
 		log.ev.cn <- 0	
@@ -672,31 +701,12 @@ GetSegLogEv <- function(idx, h.seg.dat, theta, out.p, delta.tau=NA, verbose=FALS
 	
 }
 
-GetSegLogEvDEP <- function(d, het.prob, theta, out.p, e.mu=NA, verbose=FALSE) {
-  GetSegLL <- function(x, d, het.prob, theta, out.p) {
-    dist <- x[1]
-    total <- x[2]
-    e.mu <-  c((total / 2 - dist / 2), (total / 2 + dist / 2), total)
+RecordHessian <- function(hess.mat, delta.hat, tau.hat, file) {
+	line <- data.frame(h11=hess.mat[1,1], h12=hess.mat[1,2], h21=hess.mat[2,1], h22=hess.mat[2,2], delta.hat=delta.hat, tau.hat=tau.hat, stringsAsFactors=F)
+	write.table(line, file=file, append=TRUE, quote=FALSE, sep="\t", row.names=FALSE, col.names=!file.exists(file))}
 
-    return(sum(AffyCalcSnpLogLik(d, e.mu, out.p, het.prob, theta)))
-  }
-
-  if (is.na(e.mu)) {
-    init.tau <- median(colSums(d)) 
-    quart <- init.tau / 4   
-    init.e.mu <- c(quart, init.tau - quart, init.tau)
-    e.mu <- GridstartH1OptMeans(d, init.e.mu, out.p, het.prob, theta,
-                                verbose=verbose) 
-  }
-  
-  tau <- e.mu[3]
-  dist <- abs(e.mu[2] - e.mu[1])
-
-  hess.mat <- hessian(GetSegLL, c(dist, tau), "Richardson", d=d,
-                      het.prob=het.prob, theta=theta, out.p=out.p) 
-  curv <- abs(det(hess.mat / (2 * pi)))
-  ll <- GetSegLL(c(dist, tau), d, het.prob, theta, out.p)
-  log.ev <- ll + (log((curv)^(-1 / 2))) - (log((5 / 2)^2))
-
-  return(c(log.ev, ll, curv))
+RecordSnpEv <- function(file, ll.snp, log.ev.snp, ll.snp.delta, log.ev.snp.delta, ll.snp.tau, log.ev.snp.tau ) {
+	
+	line <- data.frame(ll.snp=ll.snp, log.ev.snp=log.ev.snp, ll.snp.delta=ll.snp.delta, log.ev.snp.delta=log.ev.snp.delta, ll.snp.tau=ll.snp.tau, log.ev.snp.tau=log.ev.snp.tau, stringsAsFactors=F)
+	write.table(line, file=file, append=TRUE, quote=FALSE, sep="\t", row.names=FALSE, col.names=!file.exists(file))	
 }

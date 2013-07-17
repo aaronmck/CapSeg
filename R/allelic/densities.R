@@ -130,7 +130,7 @@ d_beta_binom = function( k, a, b, n, log=FALSE )
   ## k must be an integer for this to be correct!!
   ## a and b are prior sample sizes (the prior beta params)
    log_d = (lbeta( k + a, n - k + b) + lchoose(n,k)) - lbeta(a,b)
-
+   # if (is.nan(log_d)) log_d <- -Inf
    if( log==TRUE ) { return( log_d ) }
    else { return( exp(log_d) ) }
 }

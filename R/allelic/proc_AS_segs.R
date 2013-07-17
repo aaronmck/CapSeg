@@ -104,7 +104,6 @@ PostCalibrateAsDat <- function(dat, snp.tx, adj.atten=FALSE, verbose=FALSE) {
 }
 
 GetAlleleSegData <- function(snp.d, cn.d, capseg.d, germline.hets, snp.annot, glad.mat, snp.freqs,
-
 		use.pop, use.normal, normal,
 		bad.snps, dbSNP.annot, impute.gt,
 		mn.calls.fn, mn.sample, verbose=FALSE) {
@@ -468,7 +467,7 @@ GetAsSegs <- function(glad.mat, snp.d, cn.d, capseg.d, germline.hets, snp.gt.p, 
 		# change ref and alt names
 		colnames(raw.gh.seg) <- c("ref", "alt")
 
-		rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("Chromosome", "Start_position", "Hugo_Symbol"), drop=FALSE], 1, function(x) paste(gsub("^\\s+", "", gsub("\\s+$", "", x)), collapse="_"))
+		rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("Chromosome", "Start_position"), drop=FALSE], 1, function(x) paste(gsub("^\\s+", "", gsub("\\s+$", "", x)), collapse="_"))
 
 
 		if (verbose) {

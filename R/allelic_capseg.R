@@ -5,6 +5,14 @@
 #' @note current version was created on March 19th, 2012
 
 library(optparse)
+options(keep.source = TRUE)
+options(error = quote({
+  sink(file="error.txt");
+  dump.frames();
+  print(attr(last.dump,"error.message"));
+  traceback();
+  sink();
+  q()}))
 # require("genomic_plot.R")
 option.list <- list(
                # we include the R dat files from
@@ -23,6 +31,7 @@ drop.x= TRUE
 drop.y= TRUE
 min.seg.size= 10
 verbose= TRUE
+seg.merge.thresh = 0.5
 print("HERE")
 # where to put our output
 base.output.dir= opt$output.dir
@@ -33,10 +42,10 @@ bam.file = opt$bam.name
 code.dir = opt$source.directory
 sample.to.bam = opt$bam.to.sample
 
-#library(HAPSEG)
 sample.table <- read.delim(sample.to.bam,stringsAsFactors=F)
+sample.table <- sample.table[!is.na(sample.table$tumor_bam),]
 
-SID = sample.table[sample.table$BAM == basename(bam.file),"Sample"]
+SID = sample.table[sample.table$tumor_bam == bam.file,"sample"]
 
 if (is.na(SID) | length(SID) < 1) {
     print("Unable to find the sample, please check the inputs")
@@ -54,5 +63,12 @@ library(numDeriv)  ## needed for 'hessian()'
 
 # lookup the sample name from the sample mapping file
 # save.image("allelic.data")
-
-AllelicCapseg( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, base.output.dir, min.seg.size, drop.x, drop.y, verbose )
+AllelicCapseg( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, base.output.dir, min.seg.size, drop.x, drop.y, seg.merge.thresh, verbose )
+         , error = function(e) {
+             print("Failed")
+             traceback()
+             dump.frames()
+             x <- attr(last.dump,"error.message")
+             ll <- gsub("Error in (.*) : .*","\\1",x)
+             lln <- findLineNum(srcfile,ll)
+         })

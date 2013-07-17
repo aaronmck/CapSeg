@@ -8,14 +8,60 @@
 ## whatsoever. Neither the Broad Institute nor MIT can be responsible for its
 ## use, misuse, or functionality.
 
+OpenDev <- function(save = F, fn=NULL, height=8, width=10, reso=540, ext="jpeg") {
+	screen.height = height
+	screen.width = width
 
-AbsolutePostProcess <- function(res, seg.dat) {
-	# res <- iams.res
+	if (save) {
+		dir.create(dirname(fn), recurs=TRUE, showWarnings=FALSE)
+		file.type = switch(ext, png=png, pdf=pdf, jpeg=jpeg, bmp=bmp, tiff=tiff )
+		if (ext == 'pdf'){
+			if (!grepl(".pdf$", fn)) {
+				fn <- paste(fn, ".pdf", sep="")
+			}
+			file.type(fn, width=screen.width, height=screen.height)
+		} else {
+			if (!grepl(ext, fn)) {
+				fn <- paste(fn, ".", ext, sep="")
+			}
+			file.type(fn, width=screen.width, height=screen.height, units="in", res=reso)
+		}
+	} else x11(height=screen.height, width=screen.width)
+}
 
-	# seg.dat <- res[["seg.dat"]]
-	add <- data.frame(f=res[["capture.em.fit"]][["wes.f"]][, "f.hat"], tau=res[["capture.em.fit"]][["delta.tau"]][, "tau"], sigma.tau=res[["capture.em.fit"]][["cap.e.mu"]][, "sigma3"], mu.minor=res[["capture.em.fit"]][["cap.e.mu"]][, 'mu1'], sigma.minor=res[["capture.em.fit"]][["cap.e.mu"]][,"sigma1"], mu.major=res[["capture.em.fit"]][["cap.e.mu"]][, "mu2"], sigma.major=res[["capture.em.fit"]][["cap.e.mu"]][, "sigma2"], stringsAsFactors=F)
-	out <- cbind(seg.dat, add)
-	return(out)
+
+CreateSegTabFromHSegDat = function(h.seg.dat)
+{
+   N = length(h.seg.dat[["h.capseg.annot"]])
+   cols = c("Chromosome", "Start.bp", "End.bp", "n_probes", "length")
+   segtab = data.frame( matrix(NA, nrow=N, ncol=5) )
+   colnames(segtab) = cols
+
+   for( i in 1:N )
+   {
+      segtab[ i, c("Start.bp", "End.bp")] = range(h.seg.dat[["h.capseg.annot"]][[i]][["pos"]])
+      segtab[ i, "Chromosome"] = h.seg.dat[["h.capseg.annot"]][[i]][["chr"]]
+      segtab[ i, "n_probes"] = length(h.seg.dat[["h.capseg.annot"]][[i]][["pos"]])
+      segtab[ i, "length"] = diff(range(h.seg.dat[["h.capseg.annot"]][[i]][["pos"]]))
+   }
+
+   return(segtab)
+}
+
+
+AbsolutePostProcess <- function(res, seg.dat) 
+{
+# res <- iams.res
+# seg.dat <- res[["seg.dat"]]
+
+   add <- data.frame(f=res[["capture.em.fit"]][["wes.f"]][, "f.hat"], tau=res[["capture.em.fit"]][["delta.tau"]][, "tau"], sigma.tau=res[["capture.em.fit"]][["cap.e.mu"]][, "sigma3"], mu.minor=res[["capture.em.fit"]][["cap.e.mu"]][, 'mu1'], sigma.minor=res[["capture.em.fit"]][["cap.e.mu"]][,"sigma1"], mu.major=res[["capture.em.fit"]][["cap.e.mu"]][, "mu2"], sigma.major=res[["capture.em.fit"]][["cap.e.mu"]][, "sigma2"], stringsAsFactors=F)
+	
+   segtab <- cbind(seg.dat, add)
+
+   ix = order(segtab[,"Chromosome"], segtab[,"Start.bp"])
+   segtab = segtab[ix,]
+
+   return(segtab)
 }
 
 ArrayWesConcordanceStat <- function(res) {
@@ -23,7 +69,7 @@ ArrayWesConcordanceStat <- function(res) {
 
 	require(mnormt)
 	unatten.snp.mu <- t(apply(res[["capture.em.fit"]][["delta.tau"]], 1, function(x) AffyGetMeans(x[1], x[2])))
-
+	
 	n.segs = length(res[["capture.em.fit"]][["cap.e.mu"]][,"mu1"])
 	snp.mu <- c(unatten.snp.mu[,1], unatten.snp.mu[,2], unatten.snp.mu[,3] )
 	wes.mu <- c(AffyInvAtten(res[["capture.em.fit"]][["cap.e.mu"]][,"mu1"], res[["capture.em.fit"]][["theta"]][["at.capseg"]]),
@@ -31,9 +77,9 @@ ArrayWesConcordanceStat <- function(res) {
 			AffyInvAtten(res[["capture.em.fit"]][["cap.e.mu"]][,"mu3"], res[["capture.em.fit"]][["theta"]][["at.capseg"]]) )
 
 	snp.sigma = rep((res[["capture.em.fit"]][["delta.tau.sd"]][, "tau"]^2 + res[["capture.em.fit"]][["delta.tau.sd"]][, "delta"]^2)^(1/2) / 2, 3)
-
-	wes.sigma = c( res[["capture.em.fit"]][["cap.e.mu"]][,"sigma1"], res[["capture.em.fit"]][["cap.e.mu"]][,"sigma2"], res[["capture.em.fit"]][["cap.e.mu"]][,"sigma3"] )
-
+	
+	wes.sigma = c( res[["capture.em.fit"]][["cap.e.mu"]][,"sigma1"], res[["capture.em.fit"]][["cap.e.mu"]][,"sigma2"], res[["capture.em.fit"]][["cap.e.mu"]][,"sigma3"] )	
+	
 	idx = complete.cases(snp.mu) & complete.cases(wes.mu) & complete.cases(snp.sigma) & complete.cases(wes.sigma)
 	snp.mu <- snp.mu[idx]
 	wes.mu <- wes.mu[idx]
@@ -53,7 +99,7 @@ ArrayWesConcordanceStat <- function(res) {
 CalcConf = function(mu, sigma, conf=.95) qnorm(c((1-conf)/2, (1+conf)/2), mean=mu, sd=sigma)
 
 GetGCContent = function(seg.dat, verbose=FALSE) {
-
+	
 	if (genome.build == "hg19") {
 		require(BSgenome.Hsapiens.UCSC.hg19)
 	} else if (genome.build == "hg18") {
@@ -75,7 +121,7 @@ GetGCContent = function(seg.dat, verbose=FALSE) {
 LoadCached = function(statement, overwrite, res.fn, mod.name) {
 	if (!overwrite) {
 		if (file.exists(res.fn)) {
-			print(paste(mod.name, " result already computed.  Returning cached version."))
+			print(paste(mod.name, "result already computed.  Returning cached version:", res.fn))
 			res = readRDS(res.fn)
 			return(res)
 		} else {
@@ -86,7 +132,7 @@ LoadCached = function(statement, overwrite, res.fn, mod.name) {
 		print(paste("Not looking for cached result for ", mod.name, ".  Computing from scratch and saving."))
 		statement
 	}
-
+	
 }
 
 TruncateData = function(res, chr) {
@@ -101,14 +147,14 @@ TruncateData = function(res, chr) {
 	for (elem in trunc.list) {
 		res[["as.res"]][["h.seg.dat"]][[elem]] <- res[["as.res"]][["h.seg.dat"]][[elem]][keep.idx]
 	}
-
+	
 	res[["seg.dat"]][["seg.info"]] = res[["seg.dat"]][["seg.info"]][res[["seg.dat"]][["seg.info"]]$Chromosome == chr, ]
-
-#	res[["capture.em.fit"]][["e.mu"]] <- res[["capture.em.fit"]][["e.mu"]][keep.idx, ]
-#	res[["capture.em.fit"]][["wes.f"]]  <- res[["capture.em.fit"]][["wes.f"]][keep.idx]
-#	res[["capture.em.fit"]][["het.phase.log.p"]] <- res[["capture.em.fit"]][["het.phase.log.p"]][keep.idx]
-#	res[["capture.em.fit"]][["snp.clust.p"]] <- res[["capture.em.fit"]][["snp.clust.p"]][keep.idx]
-
+	
+#	res[["capture.em.fit"]][["e.mu"]] <- res[["capture.em.fit"]][["e.mu"]][keep.idx, ] 
+#	res[["capture.em.fit"]][["wes.f"]]  <- res[["capture.em.fit"]][["wes.f"]][keep.idx] 
+#	res[["capture.em.fit"]][["het.phase.log.p"]] <- res[["capture.em.fit"]][["het.phase.log.p"]][keep.idx] 
+#	res[["capture.em.fit"]][["snp.clust.p"]] <- res[["capture.em.fit"]][["snp.clust.p"]][keep.idx] 
+	
 	return(res)
 }
 
@@ -117,7 +163,7 @@ DownSample = function(res, frac=1/10, min = 50 ) {
 	out.res = res
 	for (i in 1:length(res[["as.res"]][["h.seg.dat"]][["h.snp.annot"]]) ) {loopStatus(i, step=1)
 #		i = 1
-		if(length(res[["as.res"]][["h.seg.dat"]][['h.snp.annot']][[i]][["pos"]]) * frac < min |
+		if(length(res[["as.res"]][["h.seg.dat"]][['h.snp.annot']][[i]][["pos"]]) * frac < min | 
 				length(res[["as.res"]][["h.seg.dat"]][['h.cn.annot']][[i]][["pos"]]) * frac < min) {
 			# Segment already small
 			next
@@ -133,7 +179,7 @@ DownSample = function(res, frac=1/10, min = 50 ) {
 			out.res[["as.res"]][["h.seg.dat"]][['h.cn.d']][[i]] = res[["as.res"]][["h.seg.dat"]][['h.cn.d']][[i]][ , cn.keep.idx, drop=F]
 			out.res[["as.res"]][["h.seg.dat"]][['h.snp.gt.p']][[i]] = res[["as.res"]][["h.seg.dat"]][['h.snp.gt.p']][[i]][snp.keep.idx, , drop=F]
 		}
-
+		
 	}
 	return(out.res)
 }
@@ -148,19 +194,19 @@ PrintHapSegStartMessage <- function(chars.per.line=73) {
 }
 
 LogAdd <- function(x) {
-
+	
   ##  Calculates log(sum(exp(x)))  without "leaving" log space
   if (is.vector(x)) {
-    mix <- which.max(x)
+    mix <- which.max(x) 
     max <- x[mix]
     res <- max + log(sum(exp(x - max )))
   }
-
+  
   if (is.matrix(x)) {
     mv <- apply(x, 1, max)
     res <- mv + log(rowSums(exp(x - mv)))
   }
-
+  
   return(res)
 }
 
@@ -178,7 +224,7 @@ ReadCol <- function(fn, col.name, save.rownames=FALSE) {
   if (!file.exists(fn)) {
     stop("File does not exist: ", fn)
   }
-
+  
   header <- read.delim(fn, nrow=1, as.is=TRUE, header=FALSE)
   if (nrow(header) < 1) {
     stop("Unable to read header information for ", fn)
@@ -198,7 +244,7 @@ ReadCol <- function(fn, col.name, save.rownames=FALSE) {
   cut.str <- paste("cut -f", col.idx.str, " ", fn, sep="")
 
   df <- read.delim(pipe(cut.str), row.names=row.names, as.is=TRUE)
-
+  
   return(df)
 }
 

@@ -34,7 +34,6 @@ CaptureHscrSegFit <- function(h.seg.dat, tol=1e-5, verbose=verbose)
    # h.seg.dat <- cap.dat[["as.res"]][["h.seg.dat"]]
    # tol=1e-5;
 
-
    CR.res = CaptureCNModelFit( h.seg.dat, verbose=verbose )
    tau = CR.res[["tau"]]
    Theta_CR = CR.res[["Theta"]]
@@ -109,19 +108,18 @@ CaptureASModelFit = function( h.seg.dat, verbose=FALSE )
 }
 
 
-CaptureASThetaOpt <- function(h.seg.dat, wes.f, Theta, verbose=FALSE) 
-{
+CaptureASThetaOpt <- function(h.seg.dat, wes.f, Theta, verbose=FALSE) {
    LL = function(par)
    {
       Theta[["f_skew"]] = par
-      cat("-")
+      if (verbose) cat("-")
       return( CalcCaptureASLogLik(h.seg.dat, wes.f[,"f.hat"], Theta) )
    }      
 
    if (verbose) print("Optimizing Capture allelic Theta")   
 
    res <- optimize(LL, lower=0.6, upper=1, tol=1e-4, maximum=TRUE )
-   cat("\n")
+   if(verbose) cat("\n")
    Theta[["f_skew"]] = res[["maximum"]]
 
    return(Theta)
@@ -136,7 +134,6 @@ CaptureCNModelFit = function( h.seg.dat, verbose=FALSE )
    eps= 1e-4
 
    Theta <- InitCaptureCRTheta(verbose=verbose)
-
    tau <- CaptureInitTau(h.seg.dat) 
    n.segs <- length(h.seg.dat[["h.capseg.d"]])
    loglik <- -Inf
@@ -168,19 +165,18 @@ CaptureCNModelFit = function( h.seg.dat, verbose=FALSE )
 
 
 
-CaptureCNThetaOpt <- function(h.seg.dat, tau, Theta, verbose=FALSE) 
-{
+CaptureCNThetaOpt <- function(h.seg.dat, tau, Theta, verbose=FALSE) {
    LL = function(par)
    {
       Theta[["sigma.scale.capseg"]] = par
-      cat("~")
+      if(verbose) cat("~")
       return( CalcCaptureCNLogLik(h.seg.dat, tau, Theta) )
    }      
 
    if (verbose) print("Optimizing Capture CR Theta")   
 
    res <- optimize(LL, lower=0, upper=20, tol=1e-4, maximum=TRUE)
-   cat("\n")
+   if(verbose) cat("\n")
    Theta[["sigma.scale.capseg"]] = res[["maximum"]]
 
    return(Theta)
@@ -259,8 +255,7 @@ neg_F_opt_func <- function( Par, alt, ref, Theta, dom )
 }
 
 
-InitCaptureF = function( h.seg.dat, Theta ) 
-{
+InitCaptureF = function( h.seg.dat, Theta, verbose=FALSE ) {
    ## Modify Theta[["allelic_out.p"]] to low tolerance for outliers.  For provisional fitting
    Theta[["allelic_out.p"]] = 0
    n.segs = length(h.seg.dat[["gh.wes.allele.d"]])
@@ -270,7 +265,7 @@ InitCaptureF = function( h.seg.dat, Theta )
    f.hat = rep(NA, n.segs)
    colnames(wes.f) = c("f.hat", "p.H0", "p.H1")
 
-   print(paste("Initializing f.hat for ", n.segs, " segs:", sep="") )
+   if (verbose) print(paste("Initializing f.hat for ", n.segs, " segs:", sep="") )
 
    for( s in 1:n.segs )
    {
@@ -288,12 +283,12 @@ InitCaptureF = function( h.seg.dat, Theta )
 #         opt <- optim(par=f_grid[i], fn=F_opt_func, method="L-BFGS-B", lower=0, upper=0.5, control=list(fnscale=-1), alt=alt, ref=ref, Theta=Theta, dom=fdom)
 #         opt_f[i,] = c( opt[["par"]], opt[["value"]] )
       }
-      cat("@")
+      if (verbose) cat("@")
 #      f.hat[s] = f_grid[which.max( t(opt_f[,2]))]
       m.ix = which.max( t(opt_f[,2]))
       f.hat[s] = opt_f[ m.ix, 1 ]
    }
-   cat("\n")
+   if(verbose) cat("\n")
    wes.f[,"f.hat"] = f.hat
 
    return(wes.f)
@@ -333,12 +328,7 @@ OptimizeCaptureF <- function(h.seg.dat, wes.f, Theta, tol=1e-5, verbose=FALSE)
          # Let H0 be for F=0.5, and H1 be for F=f
          H0.f.hat = 0.5
          ev.H0 = CalcCaptureSegAllelicLogLik(alt, ref, f=H0.f.hat, Theta )
-         prior <- 2
-         likelihood <- function(x) sapply(x, function(x) CalcCaptureSegAllelicLogLik(alt, ref, f=x, Theta ) )
-         post.numerator <- function(x) sapply(x, function(x) log(prior) + likelihood(x) )
-         dx = 1e-2
-         y = post.numerator(seq(0, 0.5, by=dx))
-         ev.H1 = LogAdd(y + log(dx))
+         ev.H1 <- GridEstimateOfFNormalizingConstant(alt, ref, Theta, dx=1e-2)
 
          ev.sum = LogAdd(c(ev.H0, ev.H1))
          log.p.H0 <- ev.H0 - ev.sum
@@ -385,6 +375,14 @@ OptimizeCaptureF <- function(h.seg.dat, wes.f, Theta, tol=1e-5, verbose=FALSE)
    return(res)
 }
 
+GridEstimateOfFNormalizingConstant <- function(alt, ref, Theta, dx=1e-2) {
+   prior <- 2
+   likelihood <- function(x) sapply(x, function(x) CalcCaptureSegAllelicLogLik(alt, ref, f=x, Theta ) )
+   post.numerator <- function(x) sapply(x, function(x) log(prior) + likelihood(x) )
+   y <- post.numerator(seq(0, 0.5, by=dx))
+   norm.const <- LogAdd(y + log(dx))
+   return(norm.const)
+}
 
 
 
@@ -433,7 +431,6 @@ CaptureInitTau <- function(h.seg.dat)
 {
    n.segs = length(h.seg.dat[["h.capseg.d"]])
    tau = rep(NA, n.segs)
-
    for(i in 1:n.segs )
    {
       d <- h.seg.dat[["h.capseg.d"]][[i]]

@@ -46,54 +46,6 @@ AffyInitTheta <- function(h.seg.dat, verbose=FALSE) {
 		return(theta)
 }
 
-
-AffyInitThetaDEP <- function(array.name, prev.theta.fn, verbose=FALSE) {
-  if (is.null(prev.theta.fn)) {
-    kHetCovCoefs <- c(-0.05, 1.0 )
-    
-    ## An at value of 0 is equivalent to no attenuation (e.g. WGS)
-    theta <- list(sigma.epsilon=0.18, sigma.eta= 0.18, nu=3.5,
-                  at=0.1, alpha=0, bg=0)
-    
-    sigma.h <- GetSigmaH(theta[["sigma.epsilon"]], theta[["sigma.eta"]])       
-    tmp.hc <- (kHetCovCoefs[1] + theta[["sigma.eta"]] * kHetCovCoefs[2])^2
-    tmp.hc <- min(sigma.h^2 - 0.001, tmp.hc)
-    theta[["het.cov"]] <- tmp.hc
-    ## outlier model is uniform on {0-5, 0-5}
-    theta[["p.snp.cond.out"]] <- 1 / 25
-  } else {
-    if (verbose) {
-      print(paste("Using previous theta:", prev.theta.fn))
-    }
-    if (file.exists(prev.theta.fn)) {
-      load(prev.theta.fn)
-      if (exists("plate_stats")) {
-        if ("stats" %in% names(plate_stats)) {
-          if (array.name %in% rownames(plate_stats[["stats"]])) {
-            array.stats <- plate_stats[["stats"]][array.name, ]
-            theta <- list(sigma.h=array.stats["sigma_h"],
-                          sigma.epsilon=array.stats["sigma_nu"],
-                          sigma.eta=array.stats["sigma_eta"],
-                          het.cov=array.stats["het_cov"],
-                          nu=array.stats["Nu"], alpha=array.stats["alpha"],
-                          bg=array.stats["BG"], at=array.stats["AT"],
-                          p.snp.cond.out=0.04)
-          } else {
-            stop(array.name, " was not contained in the prev.theta object")
-          }
-        } else {
-          stop("Invalid object contained in prev.theta.fn")
-        }
-      } else {
-        stop("Invalid object contained in prev.theta.fn")
-      }
-    } else {
-      stop("prev.theta.fn was passed in but does not exist")
-    }
-  }
-  return(theta)
-}
-
 AffyCalcSnpLogLik <- function(d, delta.tau, out.p, snp.gt.p, theta) {
   return(DoCalcSnpLogLik(d, delta.tau, out.p, snp.gt.p, theta))
 }

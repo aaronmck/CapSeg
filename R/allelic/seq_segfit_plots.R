@@ -1,8 +1,7 @@
  
 PlotAllCapture <- function(res, save = F, plots.dir) 
 {
-   CalcIntensityLims <- function(probe.type) 
-   {
+   CalcIntensityLims <- function(probe.type) {
        all.d = list()
        all.d[["capseg"]] = c(res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i]], res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i+1]])
        medians = lapply(all.d, median )
@@ -89,11 +88,13 @@ PlotCapIntensities <- function(i, res, genomic.limits, intensity.lim, use.capseg
 
    seg12$intensity = pmin(intensity.lim[2], pmax(intensity.lim[1], seg12$intensity))
    
-   main = ifelse(!is.null(res[["seg.dat"]][["seg.info"]][i,"GC.Content"]), 
-         paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1, 
-               "\n Seg1 GC: ", round(res[["seg.dat"]][["seg.info"]][i,"GC.Content"], 2), 
-               "Seg2 GC: ", round(res[["seg.dat"]][["seg.info"]][i+1,"GC.Content"], 2)),      
-         paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1))
+   # main = ifelse(!is.null(res[["seg.dat"]][i,"GC.Content"]), 
+   #       paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1, 
+   #             "\n Seg1 GC: ", round(res[["seg.dat"]][["seg.info"]][i,"GC.Content"], 2), 
+   #             "Seg2 GC: ", round(res[["seg.dat"]][["seg.info"]][i+1,"GC.Content"], 2)),      
+   #       paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1))
+
+   main = paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1)
    
    plot(seg12$position, seg12$intensity, pch=19, col=seg12$col, cex=.4, main=main, xlab=XLAB, ylab="Total copy ratio", ylim = intensity.lim, xlim=genomic.limits)
    
@@ -158,8 +159,7 @@ PlotCapsegSegfit <- function(i, res, d.col, min=NULL, max=NULL, plot=T)
 
 
 
-PlotFFit <- function( i, res, conf=.95, plot=FALSE ) 
-{
+PlotFFit <- function( i, res, conf=.95, plot=FALSE ) {
    # i = 1
    # res = iams.res
    # conf = .95
@@ -230,7 +230,8 @@ PlotFFit <- function( i, res, conf=.95, plot=FALSE )
          "Summed het posteriors", paste(round(conf*100), '% interval'), 
          "f_skew * f_hat"), 
    fill=c(post.col, f.hat.col, seg.col, conf.col, f.loc.col), bty="n" )
-   gc.string <- ifelse(!is.null(res[["seg.dat"]][["seg.info"]][i, "GC.Content"]), paste("GC Content: ", round(res[["seg.dat"]][["seg.info"]][i, "GC.Content"], 4), "\n"), "")
+   # gc.string <- ifelse(!is.null(res[["seg.dat"]][["seg.info"]][i, "GC.Content"]), paste("GC Content: ", round(res[["seg.dat"]][["seg.info"]][i, "GC.Content"], 4), "\n"), "")
+   gc.string <- ""
    title(paste("Seg:", i, "\n", ncol(d), "het snps \n", med.cov, "median coverage \n", gc.string, 
          paste("H0 Prob:", round(f.H0.p, 5), "\nH1 Prob:", round(f.H1.p, 5))), cex.main = .75 )
 }
