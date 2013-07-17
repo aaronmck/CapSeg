@@ -277,11 +277,16 @@ InitCaptureF = function( h.seg.dat, Theta, verbose=FALSE ) {
       for (i in seq_along(f_grid))
       {
 # faster
-         opt = nlm(f=neg_F_opt_func, p=f_grid[i], alt=alt, ref=ref, Theta=Theta, dom=fdom)
-         opt_f[i, ] = c(opt$estimate, -opt$minimum)
-
-#         opt <- optim(par=f_grid[i], fn=F_opt_func, method="L-BFGS-B", lower=0, upper=0.5, control=list(fnscale=-1), alt=alt, ref=ref, Theta=Theta, dom=fdom)
-#         opt_f[i,] = c( opt[["par"]], opt[["value"]] )
+         opt = try( nlm(f=neg_F_opt_func, p=f_grid[i], alt=alt, ref=ref, Theta=Theta, dom=fdom) )
+         if( class(opt) != "try-error" )
+         {
+            opt_f[i, ] = c(opt$estimate, -opt$minimum)
+         } 
+         else
+         {
+            opt <- optim(par=f_grid[i], fn=F_opt_func, method="L-BFGS-B", lower=0, upper=0.5, control=list(fnscale=-1), alt=alt, ref=ref, Theta=Theta, dom=fdom)
+            opt_f[i,] = c( opt[["par"]], opt[["value"]] )
+         }
       }
       if (verbose) cat("@")
 #      f.hat[s] = f_grid[which.max( t(opt_f[,2]))]

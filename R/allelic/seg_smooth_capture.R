@@ -209,9 +209,12 @@ CalculateH1EvidenceCapture <- function(ix.1, ix.2, h.seg.dat, theta, f.tau, verb
 
 CalculateH0EvidenceCapture <- function(ix.1, ix.2, h.seg.dat, theta, f.tau, verbose=FALSE) {
 
-   ev1 <- GetSegLogEvCapture(ix.1, h.seg.dat, theta, f.tau[ix.1,], verbose=verbose)
-   ev2 <- GetSegLogEvCapture(ix.2, h.seg.dat, theta, f.tau[ix.2,], verbose=verbose)
+#   ev1 <- GetSegLogEvCapture(ix.1, h.seg.dat, theta, f.tau[ix.1,], verbose=verbose)
+#   ev2 <- GetSegLogEvCapture(ix.2, h.seg.dat, theta, f.tau[ix.2,], verbose=verbose)
    
+   ev1 <- GetSegLogEvCapture(ix.1, h.seg.dat, theta, f.tau=NULL, verbose=verbose)
+   ev2 <- GetSegLogEvCapture(ix.2, h.seg.dat, theta, f.tau=NULL, verbose=verbose)
+
    log.ev1 <- ev1[["log.ev"]]
    log.ev2 <- ev2[["log.ev"]]
    
