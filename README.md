@@ -17,6 +17,8 @@ Prerequisites installed on the machine are:
       - plyr
       - corpcor
   - Samtools (any version should do)
+
+
 Versions
 --------
 
