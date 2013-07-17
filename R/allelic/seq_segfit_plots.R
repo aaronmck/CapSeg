@@ -1,12 +1,12 @@
- 
-PlotAllCapture <- function(res, save = F, plots.dir) 
+
+PlotAllCapture <- function(res, save = F, plots.dir)
 {
    CalcIntensityLims <- function(probe.type) {
        all.d = list()
        all.d[["capseg"]] = c(res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i]], res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i+1]])
        medians = lapply(all.d, median )
-            
-       if (!is.na(medians[[probe.type]])) 
+
+       if (!is.na(medians[[probe.type]]))
        {
           other.probe.types = setdiff(names(all.d), probe.type)
           d1 = abs(medians[[probe.type]] - medians[[other.probe.types[1] ]])
@@ -20,7 +20,7 @@ PlotAllCapture <- function(res, save = F, plots.dir)
           }
           if (intensity.lim[2] - intensity.lim[1] < 5 ) intensity.lim = c(mean(intensity.lim) - 2.5, mean(intensity.lim) + 2.5)
           if( intensity.lim[1] < 0 ) { intensity.lim[1] = 0 }  #scarter
-          return(intensity.lim)   
+          return(intensity.lim)
        } else {
           return(NULL)
        }
@@ -28,23 +28,21 @@ PlotAllCapture <- function(res, save = F, plots.dir)
 
    dir.create(plots.dir, recursive=TRUE)
    cat("Plotting segs:")
-   for( i in 1:(length(res[["as.res"]][["h.seg.dat"]][[1]]) -1)) 
-   { 
-      if (res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][["chr"]] != res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][["chr"]]) 
+   for( i in 1:(length(res[["as.res"]][["h.seg.dat"]][[1]]) -1))
+   {
+      if (res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][["chr"]] != res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][["chr"]])
       {
-         next 
+         next
       }
 
       genomic.limits = range(c(res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][['pos']]))
       genomic.limits = genomic.limits / 1e6
-   
-      cat( paste(i, ".", sep=""))
 
+      cat( paste(i, ".", sep=""))
       ilim = CalcIntensityLims("capseg")
 
       plot.fn = file.path( plots.dir, paste("Segs_", i,"_",i+1, ".jpeg", sep=""))
       jpeg(plot.fn, 7, 5, units="in", type="cairo", res=200, quality=100)
-
       par(mfrow=c(2,3))
       ScarterPar()
       PlotCapIntensities(i, res, genomic.limits, ilim, use.capseg.mean=F, draw.legend=F)
@@ -57,7 +55,6 @@ PlotAllCapture <- function(res, save = F, plots.dir)
       PlotFFit(i+1, res, conf=.95, plot=T )
 
 #      Plot_het_AF_vs_cov(i, res)
-
       dev.off()
    }
 }
@@ -67,19 +64,19 @@ PlotAllCapture <- function(res, save = F, plots.dir)
 
 
 PlotCapIntensities <- function(i, res, genomic.limits, intensity.lim, use.capseg.mean=T, draw.legend=T) {
-    
+
    #########
    seg1.col = c("coral", "black")
-   seg2.col = c("dodgerblue", "black")   
+   seg2.col = c("dodgerblue", "black")
    seg.chr = res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][["chr"]]
    Theta = res[["capture.em.fit"]][["Theta"]]
    delta.tau = res[["capture.em.fit"]][["delta.tau"]]
-   
+
    pos1 = res[["as.res"]][['h.seg.dat']][["h.capseg.annot"]][[i]][["pos"]] / 1e6
    pos2 = res[["as.res"]][['h.seg.dat']][["h.capseg.annot"]][[i+1]][["pos"]] / 1e6
    int = c(res[["as.res"]][['h.seg.dat']][["h.capseg.d"]][[i]], res[["as.res"]][['h.seg.dat']][["h.capseg.d"]][[i+1]])
    seg12 = data.frame(intensity=int, position=c(pos1, pos2), col=c(rep(seg1.col[1], length(pos1)), rep(seg2.col[1], length(pos2))), stringsAsFactors=F)
-   
+
    XLAB = paste("Chromosome ", seg.chr, " position (MB)", sep="")
    if (nrow(seg12) == 0) {
       plot(1, type="n", xlab=XLAB, ylab="Total copy ratio", xlim=genomic.limits, ylim=intensity.lim, main=paste("Segs", i, "and", i+1))
@@ -87,22 +84,22 @@ PlotCapIntensities <- function(i, res, genomic.limits, intensity.lim, use.capseg
    }
 
    seg12$intensity = pmin(intensity.lim[2], pmax(intensity.lim[1], seg12$intensity))
-   
-   # main = ifelse(!is.null(res[["seg.dat"]][i,"GC.Content"]), 
-   #       paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1, 
-   #             "\n Seg1 GC: ", round(res[["seg.dat"]][["seg.info"]][i,"GC.Content"], 2), 
-   #             "Seg2 GC: ", round(res[["seg.dat"]][["seg.info"]][i+1,"GC.Content"], 2)),      
+
+   # main = ifelse(!is.null(res[["seg.dat"]][i,"GC.Content"]),
+   #       paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1,
+   #             "\n Seg1 GC: ", round(res[["seg.dat"]][["seg.info"]][i,"GC.Content"], 2),
+   #             "Seg2 GC: ", round(res[["seg.dat"]][["seg.info"]][i+1,"GC.Content"], 2)),
    #       paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1))
 
    main = paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1)
-   
+
    plot(seg12$position, seg12$intensity, pch=19, col=seg12$col, cex=.4, main=main, xlab=XLAB, ylab="Total copy ratio", ylim = intensity.lim, xlim=genomic.limits)
-   
+
    atten.tau1 = AffyAtten(delta.tau[i, 2], Theta[["at.capseg"]])
    atten.tau2 = AffyAtten(delta.tau[i+1, 2], Theta[["at.capseg"]])
    lines(range(pos1), rep(atten.tau1, 2), col=seg1.col[2], lwd=1, lty=2)
    lines(range(pos2), rep(atten.tau2, 2), col=seg2.col[2], lwd=1, lty=2)
-   
+
    if (draw.legend) {
       legend("topright", legend=c("SNP-derived Mu3", "Capseg Mean"), lty=c(1, 4), lwd=3)
    }
@@ -110,32 +107,32 @@ PlotCapIntensities <- function(i, res, genomic.limits, intensity.lim, use.capseg
 
 
 
-PlotCapsegSegfit <- function(i, res, d.col, min=NULL, max=NULL, plot=T) 
+PlotCapsegSegfit <- function(i, res, d.col, min=NULL, max=NULL, plot=T)
 {
    h.d = res[['as.res']][["h.seg.dat"]][["h.capseg.d"]][[i]]
    tau = res[['capture.em.fit']][["delta.tau"]][i, 2]
    Theta = res[['capture.em.fit']][["Theta"]]
 #   array.name = basename(RESULTS.DIR)
    array.name = ""
-   
+
    if (length(h.d) == 0) {
       if (plot) {
          plot(1, type="n")
       }
       return(h.d)
    }
-   
+
    if (is.null(min) & is.null(max)) {
       quant = quantile(h.d, probs=seq(from=.01, 1, length.out=100))
       intensity.lim = c(floor(quant[[10]]), ceiling(quant[[90]]))
-      
+
       if (intensity.lim[2] - intensity.lim[1] < 5 ) intensity.lim = c(mean(intensity.lim) - 2.5, mean(intensity.lim) + 2.5)
-      
+
       min = intensity.lim[1]
       max = intensity.lim[2]
    }
 
-   XLAB="Total copy ratio"   
+   XLAB="Total copy ratio"
    if (plot) {
       if (length(h.d) > 0) {
          df <- pmax(min, pmin(max, h.d))
@@ -145,10 +142,10 @@ PlotCapsegSegfit <- function(i, res, d.col, min=NULL, max=NULL, plot=T)
       } else {
          plot(1, type="n", main=array.name, xlab=XLAB, xlim=c(min, max))
             }
-      
+
       if(!is.null(tau)) {
          xgl = 1001
-         x <- seq(min, max, length.out=xgl)   
+         x <- seq(min, max, length.out=xgl)
          y = ExomeDFunc(x, tau, Theta)
          lines(x, y, lwd=2, col="green")
       }
@@ -173,21 +170,21 @@ PlotFFit <- function( i, res, conf=.95, plot=FALSE ) {
    f.hat = wes.f["f.hat"]
    f.H0.p = wes.f["p.H0"]
    f.H1.p = wes.f["p.H1"]
-   
+
    post.col = "blue"
    f.hat.col = "orange"
    seg.col = "purple"
    conf.col = "darkgrey"
    f.loc.col = "black"
-   
-   if (length(d) == 0 ) 
+
+   if (length(d) == 0 )
    {
 #      array.name = basename(RESULTS.DIR)
       array.name = ""
       plot(0, type="n", main=paste("No Data for seg", i, "\n", array.name), cex.main=.75)
       return()
    }
-   
+
    alt = d["alt",]
    ref = d["ref",]
 #   alt.phase.prob = CapturePhaseProb( alt, ref, f.hat, Theta)[,1]
@@ -200,39 +197,39 @@ PlotFFit <- function( i, res, conf=.95, plot=FALSE ) {
 
    seg.crds = paste(paste(round(range(h.seg.dat[["gh.wes.allele.annot"]][[i]][['pos']]) / 1e6, 2), collapse="-"), "MB")
    curve( dbeta(x, e.alpha.seg, e.beta.seg) , from=0, to=1, n=1001, add=FALSE, col= post.col, xlab=paste("Fraction of alternate reads \n",  seg.crds), ylab="Density", ylim=c(0,d.mode))
-   
+
    lb = qbeta((1 - conf) / 2, e.alpha.seg, e.beta.seg)
    ub = qbeta((1 + conf) / 2, e.alpha.seg, e.beta.seg)
-   
+
    abline(v=c(lb, ub), col=conf.col)
-   abline(v=c(f.hat, 1-f.hat), col=f.hat.col, lwd=3, lty=3) 
+   abline(v=c(f.hat, 1-f.hat), col=f.hat.col, lwd=3, lty=3)
 
    A1 = Theta[["f_skew"]] * f.hat
-   abline(v=A1, col=f.loc.col, lwd=3, lty=3) 
-#   abline(v= Theta[["f_skew"]] * (1-f.hat), col=f.loc.col, lwd=3, lty=3) 
+   abline(v=A1, col=f.loc.col, lwd=3, lty=3)
+#   abline(v= Theta[["f_skew"]] * (1-f.hat), col=f.loc.col, lwd=3, lty=3)
    A2 =  1 - (Theta[["f_skew"]]^-1 * f.hat)
-   abline(v=A2, col=f.loc.col, lwd=3, lty=3) 
-   
+   abline(v=A2, col=f.loc.col, lwd=3, lty=3)
+
    med.cov = median(colSums(d))
 
    x = seq(0,1,length=1001)
    running_sum = rep(0, length(x))
    for( k in 1:ncol(d) )
-   { 
+   {
       running_sum = running_sum + dbeta( x, d["alt",k]+1, d["ref",k]+1 ) / ncol(d)
    }
   ## scale two plots to fit on same axes..
-   running_sum = running_sum * (d.mode/max(running_sum) * 1/3) 
+   running_sum = running_sum * (d.mode/max(running_sum) * 1/3)
    lines( x, running_sum, col=seg.col )
 
-   legend(cex = .7, "topright", 
-      legend=c("F Posterior of seg", paste("F.hat =", round(f.hat, 4)), 
-         "Summed het posteriors", paste(round(conf*100), '% interval'), 
-         "f_skew * f_hat"), 
+   legend(cex = .7, "topright",
+      legend=c("F Posterior of seg", paste("F.hat =", round(f.hat, 4)),
+         "Summed het posteriors", paste(round(conf*100), '% interval'),
+         "f_skew * f_hat"),
    fill=c(post.col, f.hat.col, seg.col, conf.col, f.loc.col), bty="n" )
    # gc.string <- ifelse(!is.null(res[["seg.dat"]][["seg.info"]][i, "GC.Content"]), paste("GC Content: ", round(res[["seg.dat"]][["seg.info"]][i, "GC.Content"], 4), "\n"), "")
    gc.string <- ""
-   title(paste("Seg:", i, "\n", ncol(d), "het snps \n", med.cov, "median coverage \n", gc.string, 
+   title(paste("Seg:", i, "\n", ncol(d), "het snps \n", med.cov, "median coverage \n", gc.string,
          paste("H0 Prob:", round(f.H0.p, 5), "\nH1 Prob:", round(f.H1.p, 5))), cex.main = .75 )
 }
 
@@ -242,7 +239,7 @@ Plot_het_AF_vs_cov = function(i, res)
 {
    d = h.seg.dat[["gh.wes.allele.d"]][[i]]
    alt=d["alt",]
-   ref= d["ref",] 
+   ref= d["ref",]
 
    cov = alt+ref
    AF = alt / cov
@@ -276,20 +273,20 @@ Plot_allelic_fraction_vs_genome = function( i, res, genomic.limits )
    f.hat.1 = res[["capture.em.fit"]][["wes.f"]][i,"f.hat"]
    f.hat.2 = res[["capture.em.fit"]][["wes.f"]][i+1,"f.hat"]
 
-   if (length(d1) == 0 ) 
+   if (length(d1) == 0 )
    {
       array.name = ""
       plot(0, type="n", main=paste("No Data for seg", i, "\n", array.name), cex.main=.75)
       return()
    }
 
-   if (length(d2) > 0 ) 
+   if (length(d2) > 0 )
    {
       het.mat.1 = res[["capture.em.fit"]][["het.phase.prob"]][[i]]
-      het.mat.2 = res[["capture.em.fit"]][["het.phase.prob"]][[i+1]] 
+      het.mat.2 = res[["capture.em.fit"]][["het.phase.prob"]][[i+1]]
       het.mat = rbind(het.mat.1, het.mat.2)
    }
-   else 
+   else
    {
       het.mat = res[["capture.em.fit"]][["het.phase.prob"]][[i]]
    }
@@ -309,8 +306,8 @@ Plot_allelic_fraction_vs_genome = function( i, res, genomic.limits )
    pos2 = res[["as.res"]][['h.seg.dat']][["h.capseg.annot"]][[i+1]][["pos"]] / 1e6
    seg.crds = c(pos1, pos2)
 
-   alt= d["alt",] 
-   ref= d["ref",] 
+   alt= d["alt",]
+   ref= d["ref",]
 
    het.1.color <- "red"
    het.2.color <- "blue"
@@ -353,7 +350,7 @@ Plot_allelic_fraction_vs_genome = function( i, res, genomic.limits )
 if( FALSE )
 {
   ## scale two plots to fit on same axes..
-   scale = 1/max(cov) 
+   scale = 1/max(cov)
    lines( seg.crds, cov*scale )
 #   ax.ix = seq( 0, max(cov), length
    axis( at=cov*scale, labels=cov, label="cov", side=4 )

@@ -64,11 +64,4 @@ library(numDeriv)  ## needed for 'hessian()'
 # lookup the sample name from the sample mapping file
 # save.image("allelic.data")
 AllelicCapseg( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, base.output.dir, min.seg.size, drop.x, drop.y, seg.merge.thresh, verbose )
-         , error = function(e) {
-             print("Failed")
-             traceback()
-             dump.frames()
-             x <- attr(last.dump,"error.message")
-             ll <- gsub("Error in (.*) : .*","\\1",x)
-             lln <- findLineNum(srcfile,ll)
-         })
+

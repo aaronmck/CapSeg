@@ -10,13 +10,11 @@ AllelicCapseg = function( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, 
   # drop.x <- FALSE
   # drop.y <- TRUE
   # verbose=TRUE
-   print("HERESRESRS")
    RESULTS.DIR=file.path(base.output.dir, "results" ); dir.create(RESULTS.DIR, recurs=TRUE, showWarnings=FALSE)
    plots.dir=file.path(base.output.dir, "plots", SID ); dir.create(plots.dir, recurs=TRUE, showWarnings=FALSE)
 
 
    result_FN = file.path(base.output.dir, paste(SID, ".AllelicCapseg.rds", sep="") )
-   print("HERE222")
  ## tmp.names is needed because the ReadGladMat parser requires the sample name corresponding to the rows it will extract so that it can pull single samples out of merged seg files.  However sometimes hyphens get mutated into dots and dumb stuff like that.  So tmp.name is what is actually in the seg file.
    tmp.name <- read.delim(capseg.seg.fn, stringsAsFactors=FALSE, check.names=FALSE)$Sample[1]
    seg.dat <- as.data.frame(ReadGladMat(capseg.seg.fn, sample.name=tmp.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, type="capseg", verbose=verbose)[[1]], stringsAsFactors=FALSE)
