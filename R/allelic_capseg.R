@@ -22,17 +22,17 @@ option.list <- list(
                make_option(c("--coverage.file"),help="Any sex chromosomes; each with by tangent normalized by itself. Seperate a list with a comma, no spaces",default="blank"),
                make_option(c("--bam.name"),help="bam file",default="blank"),
                make_option(c("--source.directory"),help="where to include source code from",default="blank"),
-               make_option(c("--bam.to.sample"),help="the bam file to sample name mapping",default="blank")
-)
+               make_option(c("--bam.to.sample"),help="the bam file to sample name mapping",default="blank"),
+               make_option(c("--seg.merge.thresh"),help="the threshold to merge segments: segments smaller than this size with be merged with the appropriate neighbor",default="blank"),
+               make_option(c("--min.seg.size"),help="the probability threshold for Bayesian segment merging",default="blank")
+               )
 opt <- parse_args(OptionParser(option_list=option.list))
 
 # not sure if these should be parameters
 drop.x= TRUE
 drop.y= TRUE
-min.seg.size= 10
 verbose= TRUE
-seg.merge.thresh = 0.5
-print("HERE")
+
 # where to put our output
 base.output.dir= opt$output.dir
 capseg.probe.fn= opt$probe.file # "/xchip/cga2/bryanh/HAPSEG/hapseg_extreme/brain.mets/capseg.results/PB-PB0036-TM-NT-SM-2O41H-SM-2O41I.tsv"
@@ -41,12 +41,18 @@ germline.het.fn= opt$coverage.file # "/xchip/cga4/home/peleg/METS_germline/hetRe
 bam.file = opt$bam.name
 code.dir = opt$source.directory
 sample.to.bam = opt$bam.to.sample
+min.seg.size= opt$min.seg.size
+seg.merge.thresh = opt$seg.merge.thresh
 
 sample.table <- read.delim(sample.to.bam,stringsAsFactors=F)
-sample.table <- sample.table[!is.na(sample.table$tumor_bam),]
+print(summary(sample.table))
 
-SID = sample.table[sample.table$tumor_bam == bam.file,"sample"]
+sample.table <- sample.table[!is.na(sample.table$BAM),]
 
+print(summary(sample.table))
+print(bam.file)
+SID = sample.table[sample.table$BAM == basename(bam.file),"Sample"]
+print(SID)
 if (is.na(SID) | length(SID) < 1) {
     print("Unable to find the sample, please check the inputs")
     quit(status=1)

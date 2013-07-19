@@ -1,4 +1,5 @@
 import scala.util._
+import java.lang.Integer
 import org.broadinstitute.sting.commandline.ArgumentSource
 import org.broadinstitute.sting.queue.extensions.samtools._
 import org.broadinstitute.sting.queue.function.scattergather.{GatherFunction, CloneFunction, ScatterFunction}
@@ -87,17 +88,23 @@ class CapSeg extends QScript {
   @Argument(doc = "the undo splits method", shortName = "ssm", required = false)
   var segmentSplits = "sdundo"
 
+  @Argument(doc = "the segment SD setting", shortName = "ssd", required = false)
+  var segmentSD = "1.5"
+
   @Argument(doc = "the threshold to merge segments: segments smaller than this size with be merged with the appropriate neighbor", shortName = "", required = false)
-  var segMergeThresh = "1.5"
+  var segMergeThresh = 1.5
 
   @Argument(doc = "the probability threshold for Bayesian segment merging", shortName = "msc", required = false)
-  var minSegCount = "1.5"
+  var minSegCount = 10
 
   // the command line traits -- defaults for our pipeline
   trait CommandLineGATKArgs extends CommandLineGATK {
     this.reference_sequence = reference
     this.memoryLimit = 6
   }
+
+  // where to put the queue log directory
+  val queueLogDir: String = ".qlog/"  // Gracefully hide Queue's output
 
   // ----------------------------------------------------------------------------------------------------------------
   // The main script
@@ -207,7 +214,7 @@ class CapSeg extends QScript {
       // now check to ensure that this tumor has a normal sample associated with it
       if (sampleObj.checkForTumorNormalBamsAndVCF(sample)) {
         alleleBalance(tumor, normalMap(sample), vcfMap(sample), dbsnp, output, reference)
-        add(new AllelicCapSeg(signalFile, outAllelicDir, segmentFile, output, tumor, srcDir, libraryDir, tumorBamToSampleFile, segMergeThresh, minSegCount))
+        add(new AllelicCapSeg(signalFile, outAllelicDir, segmentFile, output, tumor, srcDir, libraryDir, tumorBamToSampleFile, segMergeThresh, minSegCount, queueLogDir))
       }
 
       signal ::= signalFile
@@ -411,11 +418,11 @@ class PostProcessBaitCoverage(inputFile: File, targets: File, outputFile: File, 
 }
 
 // get allelic capseg data
-class AllelicCapSeg(probeFL: File, outputDir: File, segmentFile: File, covFile: File, bamName: File, codeDir: File, baseScript: File, bamToSmp: File, segMergeThresh: Double, minSegCount: Double) extends CommandLineFunction {
+class AllelicCapSeg(probeFL: File, outputDir: File, segmentFile: File, covFile: File, bamName: File, codeDir: File, baseScript: File, bamToSmp: File, segMerge: Double, minSeg: Integer, queueLogDir: File) extends CommandLineFunction {
   @Input(doc = "the probe file") var probe = probeFL
   @Argument(doc = "code directory; where to find the rest of the R code") var code = codeDir
-  @Argument(doc = "segment merge threshold") var code = segMergeThresh
-  @Argument(doc = "minimum segment size") var minSeg = minSegCount
+  @Argument(doc = "segment merge threshold") var segMergeThresh = segMerge
+  @Argument(doc = "minimum segment size") var minSegCount = minSeg
   @Input(doc = "output directory") var out = outputDir
   @Input(doc = "the segment file") var seg = segmentFile
   @Input(doc = "the coverage file") var cov = covFile
@@ -423,7 +430,8 @@ class AllelicCapSeg(probeFL: File, outputDir: File, segmentFile: File, covFile: 
   @Input(doc = "the bam to sample file") var bamToSample = bamToSmp
   @Argument(doc = "where to find the base directory") var loc = baseScript
   memoryLimit = Some(2)
-
+  this.analysisName = queueLogDir + "/" + bamName.getName() + ".allelicResults"
+  this.jobName = queueLogDir + "/" + bamName.getName() + ".allelicResults"
   def commandLine = "Rscript %s/R/allelic_capseg.R --output.dir %s --probe.file %s --segment.file %s --coverage.file %s --bam.name %s --source.directory %s --bam.to.sample %s --seg.merge.thresh %s --min.seg.size %s".format(loc.getAbsolutePath(),out.getAbsolutePath(),probe.getAbsolutePath(),seg.getAbsolutePath(),cov.getAbsolutePath(),bam,code.getAbsolutePath(),bamToSample.getAbsolutePath(),segMergeThresh,minSegCount);
 }
 
@@ -519,7 +527,6 @@ class TumorNormalFile(inputFile: String) extends ReadDelimitedFile(inputFile, "\
   def getVCFMap(): Map[String, File] = {
     return (vcfFiles)
   }
-
 
   def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit) {
     val p = new java.io.PrintWriter(f)
