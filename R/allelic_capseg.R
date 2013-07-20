@@ -23,8 +23,8 @@ option.list <- list(
                make_option(c("--bam.name"),help="bam file",default="blank"),
                make_option(c("--source.directory"),help="where to include source code from",default="blank"),
                make_option(c("--bam.to.sample"),help="the bam file to sample name mapping",default="blank"),
-               make_option(c("--seg.merge.thresh"),help="the threshold to merge segments: segments smaller than this size with be merged with the appropriate neighbor",default="blank"),
-               make_option(c("--min.seg.size"),help="the probability threshold for Bayesian segment merging",default="blank")
+               make_option(c("--seg.merge.thresh"),help="the probability threshold for Bayesian segment merging",default="blank"),
+               make_option(c("--min.seg.size"),help="the threshold to merge segments: segments smaller than this size with be merged with the appropriate neighbor",default="blank")
                )
 opt <- parse_args(OptionParser(option_list=option.list))
 

@@ -246,6 +246,11 @@ class CapSeg extends QScript {
                             alleleOutput))
   }
 
+
+  // ----------------------------------------------------------------------------------------------------------------
+  // utility function section; also contains GATK walker invocations
+  // ----------------------------------------------------------------------------------------------------------------
+
   // sample to lane walker
   def sampleToLane(bamsIn: File, sampleToLane: File, bamFileToSample: File, sampleInterval: File) = {
     val sampleTL = new SampleToLaneWalker
