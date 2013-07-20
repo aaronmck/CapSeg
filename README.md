@@ -1,7 +1,9 @@
 CapSeg
 ======
 
-CapSeg - Copy Number from Exome Sequencing
+CapSeg - Copy number from exome sequencing
+
+
 Aaron McKenna <aaronmck at uw.edu>
 
 CapSeg is a tool for transforming exome sequencing data to copy number information in cancer samples.  
