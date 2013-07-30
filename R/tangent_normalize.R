@@ -138,91 +138,90 @@ bait.factor = bait.factor[is.element(rownames(bait.factor),rownames(tumor.data))
 
 if (TRUE) {
 
-# mean center the tumor and normal samples
-tumor.data = sweep(tumor.data,2,apply(tumor.data,2,mean),"/")
+    # mean center the tumor and normal samples
+    tumor.data = sweep(tumor.data,2,apply(tumor.data,2,mean),"/")
 
-# get the sex assignments; a list of each sex with their associated columns
-sex.columns = process.sex.assignments(sex.calls,colnames(tumor.data))
-print(summary(sex.columns))
-# order both our tumors and normals; females then males
-tumor.data <- cbind(tumor.data[!sex.columns],tumor.data[sex.columns])
-normal.data <- cbind(normal.data[!sex.columns],normal.data[sex.columns])
+    # get the sex assignments; a list of each sex with their associated columns
+    sex.columns = process.sex.assignments(sex.calls,colnames(tumor.data))
+    print(summary(sex.columns))
+    # order both our tumors and normals; females then males
+    tumor.data <- cbind(tumor.data[!sex.columns],tumor.data[sex.columns])
+    normal.data <- cbind(normal.data[!sex.columns],normal.data[sex.columns])
 
-# order the sex data
-sex.columns <- sex.columns[order(sex.columns)]
+    # order the sex data
+    sex.columns <- sex.columns[order(sex.columns)]
 
-# get a list of the split sex - autosomal data
-tumor.split = split.out.sex.chromosomes(tumor.data,sex.chromosomes,baits)
-normal.split = split.out.sex.chromosomes(normal.data,sex.chromosomes,baits)
+    # get a list of the split sex - autosomal data
+    tumor.split = split.out.sex.chromosomes(tumor.data,sex.chromosomes,baits)
+    normal.split = split.out.sex.chromosomes(normal.data,sex.chromosomes,baits)
 
-# now that we're processing in pieces, we have to save this in a list format
-processed.data = list()
+    # now that we're processing in pieces, we have to save this in a list format
+    processed.data = list()
 
-# now normalize coverage across each of the split data (split by sex/autosomal data)
-for (n in c("autosome",sex.chromosomes)) {
-    print(paste("Starting analysis for chromosome",n))
+    # now normalize coverage across each of the split data (split by sex/autosomal data)
+    for (n in c("autosome",sex.chromosomes)) {
+        print(paste("Starting analysis for chromosome",n))
 
-    log.tumor = mean.center.log.transform(tumor.split[[n]])
-    log.normal = mean.center.log.transform(normal.split[[n]])
+        log.tumor = mean.center.log.transform(tumor.split[[n]])
+        log.normal = mean.center.log.transform(normal.split[[n]])
 
-    # do the initial block normalization
-    bgs.center = rep(mean(colMeans(log.normal)),nrow(log.normal)) # rep(0.0,nrow(normal.data)) # log.normals[,ncol(log.normals)] # rep(0.0,nrow(normal.data))
-    names(bgs.center) <- rownames(log.normal)
-    log.normal = data.frame(log.normal[,1:ncol(log.normal)] - bgs.center,check.names=F)
-    log.tumor = data.frame(log.tumor - bgs.center,check.names=F)
+        # do the initial block normalization
+        bgs.center = rep(mean(colMeans(log.normal)),nrow(log.normal)) # rep(0.0,nrow(normal.data)) # log.normals[,ncol(log.normals)] # rep(0.0,nrow(normal.data))
+        names(bgs.center) <- rownames(log.normal)
+        log.normal = data.frame(log.normal[,1:ncol(log.normal)] - bgs.center,check.names=F)
+        log.tumor = data.frame(log.tumor - bgs.center,check.names=F)
 
-    print(paste("Data loaded and means and log values calculated...",n))
-    #load up the whole data set into the tangent normalization process, and calibrate each tumor against the matrix
-    if (use.histo.data) {
-        print("loading the historical data...")
-        log.normal = additional.normals(tangent.database.location,log.normal,build.version,analysis.set.name)
-    }
-
-    target.intersect <- intersect(rownames(log.normal),rownames(log.tumor))
-    log.normal <- intersect.tumor.normal.targets(log.normal,target.intersect)
-    log.tumor <- intersect.tumor.normal.targets(log.tumor,target.intersect)
-
-    print("About to perform the SVD (PI)")
-
-    # if we're a sex chromosome, split the two sample piles by their sex assignment
-    if (n != "autosome") {
-        calibrated.tumor = data.frame()
-        # split out the two piles, male and female
-
-        if (sum(!sex.columns) > 0) {
-            print("FEMALE")
-            females.ln = log.normal[,!sex.columns]
-            females.lt = log.tumor[,!sex.columns]
-            pseudo.inverse.norm  <- pseudoinverse(data.matrix(females.ln))
-            calibrated.tumor <- calibrate.tumors(data.matrix(females.lt),data.matrix(pseudo.inverse.norm),data.matrix(females.ln),bgs.center,first=TRUE)
-            colnames(calibrated.tumor) <- colnames(females.lt)
+        print(paste("Data loaded and means and log values calculated...",n))
+        #load up the whole data set into the tangent normalization process, and calibrate each tumor against the matrix
+        if (use.histo.data) {
+            print("loading the historical data...")
+            log.normal = additional.normals(tangent.database.location,log.normal,build.version,analysis.set.name)
         }
 
-        if (sum(sex.columns) > 0) {
-            print("HERE")
-            males.ln = log.normal[,sex.columns]
-            males.lt = log.tumor[,sex.columns]
-            pseudo.inverse.norm  <- pseudoinverse(data.matrix(males.lt))
-            calibrated.tumor <- cbind(calibrated.tumor,calibrate.tumors(data.matrix(males.lt),data.matrix(pseudo.inverse.norm),data.matrix(males.ln),bgs.center,first=TRUE))
-            print(dim(calibrated.tumor))
-            print(length(c(colnames(calibrated.tumor)[!sex.columns],colnames(males.lt))))
-            colnames(calibrated.tumor) <- c(colnames(calibrated.tumor)[!sex.columns],colnames(males.lt))
+        target.intersect <- intersect(rownames(log.normal),rownames(log.tumor))
+        log.normal <- intersect.tumor.normal.targets(log.normal,target.intersect)
+        log.tumor <- intersect.tumor.normal.targets(log.tumor,target.intersect)
+
+        print("About to perform the SVD (PI)")
+
+        # if we're a sex chromosome, split the two sample piles by their sex assignment
+        if (n != "autosome") {
+            calibrated.tumor = data.frame()
+            # split out the two piles, male and female
+
+            if (sum(!sex.columns) > 0) {
+                print("FEMALE")
+                females.ln = log.normal[,!sex.columns]
+                females.lt = log.tumor[,!sex.columns]
+                pseudo.inverse.norm  <- pseudoinverse(data.matrix(females.ln))
+                calibrated.tumor <- calibrate.tumors(data.matrix(females.lt),data.matrix(pseudo.inverse.norm),data.matrix(females.ln),bgs.center,first=TRUE)
+                colnames(calibrated.tumor) <- colnames(females.lt)
+            }
+
+            if (sum(sex.columns) > 0) {
+                print("HERE")
+                males.ln = log.normal[,sex.columns]
+                males.lt = log.tumor[,sex.columns]
+                pseudo.inverse.norm  <- pseudoinverse(data.matrix(males.lt))
+                calibrated.tumor <- cbind(calibrated.tumor,calibrate.tumors(data.matrix(males.lt),data.matrix(pseudo.inverse.norm),data.matrix(males.ln),bgs.center,first=TRUE))
+                print(dim(calibrated.tumor))
+                print(length(c(colnames(calibrated.tumor)[!sex.columns],colnames(males.lt))))
+                colnames(calibrated.tumor) <- c(colnames(calibrated.tumor)[!sex.columns],colnames(males.lt))
+            }
         }
-    }
-    else {
-        pseudo.inverse.norm  <- pseudoinverse(data.matrix(log.normal))
-        calibrated.tumor <- calibrate.tumors(data.matrix(log.tumor),data.matrix(pseudo.inverse.norm),data.matrix(log.normal),bgs.center,first=TRUE)
-        colnames(calibrated.tumor) <- colnames(tumor.data)
-    }
-    # save off each piece of our work as we go
-    tn = calibrated.tumor# log.tumor) # ,log.normal)
-    processed.data[[n]] = tn
+        else {
+            pseudo.inverse.norm  <- pseudoinverse(data.matrix(log.normal))
+            calibrated.tumor <- calibrate.tumors(data.matrix(log.tumor),data.matrix(pseudo.inverse.norm),data.matrix(log.normal),bgs.center,first=TRUE)
+            colnames(calibrated.tumor) <- colnames(tumor.data)
+        }
+        # save off each piece of our work as we go
+        tn = calibrated.tumor# log.tumor) # ,log.normal)
+        processed.data[[n]] = tn
 }
-
-# save off the data to a Rdata object for later -- not anymore
-# save.off.processed.data(log.normals,log.tumors,calibrated.tumors,baits,paste(tangent.database.output,build.version,sep="/"),analysis.set.name,build.version)
-calibrated.tumors <- rbind(data.frame(processed.data[["autosome"]],check.names=F),data.frame(processed.data[["X"]],check.names=F),data.frame(processed.data[["Y"]],check.names=F))
-rownames(calibrated.tumors) <- rownames(tumor.data)
+    # save off the data to a Rdata object for later -- not anymore
+    # save.off.processed.data(log.normals,log.tumors,calibrated.tumors,baits,paste(tangent.database.output,build.version,sep="/"),analysis.set.name,build.version)
+    calibrated.tumors <- rbind(data.frame(processed.data[["autosome"]],check.names=F),data.frame(processed.data[["X"]],check.names=F),data.frame(processed.data[["Y"]],check.names=F))
+    rownames(calibrated.tumors) <- rownames(tumor.data)
 
 } else {
     # do the non-sex based normalization
