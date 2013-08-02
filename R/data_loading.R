@@ -1,4 +1,3 @@
-
 #' load the exome data and process it down to a data matrix
 #' @param data the data csv file name
 #' @param baits the baits name
@@ -8,10 +7,11 @@
 #' @keywords exome coverage
 #'
 load.exome.data = function(
-		data, # the data matrix produced by the rest of capseg
-		baits
+data, # the data matrix produced by the rest of capseg
+baits,
+
 ) {
-	return(read.delim(data,check.names=F,stringsAsFactors=F))
+	tbl = read.delim(data,check.names=F,stringsAsFactors=F))
 }
 
 #' load the exome data and process it down to a data matrix

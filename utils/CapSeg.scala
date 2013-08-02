@@ -24,6 +24,10 @@ import java.io._
 // @date   August 2nd, 2013
 // @email  aaron@broadinstitute.org
 //
+// This Queue script (queue is from the GATK group) that manages the execution of
+// CapSeg.  It ties all the disparate parts together and feeds the input of different
+// sub tools into each other.
+//
 // --------------------------------------------------------------------------------------------------------------------------------
 class CapSeg extends QScript {
   qscript =>
@@ -86,6 +90,8 @@ class CapSeg extends QScript {
   var tangentOutputLocation = new File("/xchip/cga2/aaron/static/normal_subspaces/")
 
   // ------------- segmentation parameters; used to when segmenting the signal for each sample ---------------
+
+  // parameters that get fed to CBS - which actually generates the segmentation from each sample
   @Argument(doc = "the alpha value to use for the cutoff in segmentation", shortName = "sav", required = false)
   var segmentAlpha = "0.001"
 
@@ -95,8 +101,9 @@ class CapSeg extends QScript {
   @Argument(doc = "the segment SD setting", shortName = "ssd", required = false)
   var segmentSD = "1.5"
 
+  // parameters that get send to allelic capseg -- the program that integrates the segments with allele-specific data
   @Argument(doc = "the probability threshold for Bayesian segment merging", shortName = "", required = false)
-  var segMergeThresh = 1.5
+  var segMergeThresh = 0.5
 
   @Argument(doc = "the threshold to merge segments: segments smaller than this size with be merged with the appropriate neighbor", shortName = "msc", required = false)
   var minSegCount = 10

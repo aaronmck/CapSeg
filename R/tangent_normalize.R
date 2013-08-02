@@ -13,8 +13,6 @@ option.list <- list(
                make_option(c("--normal.lane.data"),help="the normal exome coverage: lanes as rows, exome targets (or baits) as rows",default="./"),
                make_option(c("--tumor.lane.data"),help="the tumor exome coverage: lanes as rows, exome targets (or baits) as rows",default="blank"),
                make_option(c("--target.list"),help="the list of targets we captured in sequencing",default="blank"),
-               make_option(c("--use.cache"),help="should we use the cached data from a previous run (if available)?",default="blank"),
-               make_option(c("--cache.location"),help="where we should look for cached data (if use_cached_data is set), and where we should save data to post-processing",default="blank"),
                make_option(c("--script.dir"),help="where we can find the wesseg scripts - where you placed the checked out tool into",default="blank"),
                make_option(c("--normal.sample.to.lanes.file"),help="the file containing the mapping of the read groups to the sample names (for normals)",default="blank"),
                make_option(c("--tumor.sample.to.lanes.file"),help="the file containing the mapping of the read groups to the sample names (for tumors)",default="blank"),
@@ -95,11 +93,10 @@ epsilon <- .Machine$double.eps * 10^6
 # options(error=dump.frames)
 
 # create the output directory and the cache directory if needed, and setup some debug logging locations (used only if debug == T)
-dir.create(output.location,recursive=T)
-dir.create(cached.location,recursive=T)
-debug.location = paste(output.location,"debug",sep="/")
-
+dir.create(output.location,recursive=T, showWarnings=F)
 if (debug) {
+    debug.location = paste(output.location,"debug",sep="/")
+    print(paste("debug location: ",debug.location))
     dir.create(debug.location,recursive=T)
     sink(paste(output.location,"debug","debugging_log.txt",sep="/"))
     save.image(paste(debug.location,".parameters.Rdata",sep="/")) # save off a copy of the parameters we used for the run
@@ -116,20 +113,21 @@ if (debug) print(paste("loading the baits from the file",target.list.file))
 baits <- read.csv(target.list.file,header=TRUE,colClasses=c("character","character","integer","integer"))
 baits <- data.frame(baits[!duplicated(baits$name),])
 
-# load the big data data - the csv files of coverage; let the user know how long this is taking
+# load the big data - the csv files of coverage; let the user know how long this is taking
 if (debug) print(paste("Starting to load the data at",format(Sys.time(), "%a %b %d %H:%M:%S %Y")))
 
 tumor.data <- load.exome.data(tumor.lane.data)
-normal.data <- load.exome.data(normal.lane.data)
+normal.data <- load.exome.data(normal.lane.data,normal=TRUE)
 
 if (debug) print(paste("Intersecting the normal and tumor bait lists, normal data has",nrow(normal.data),"rows, tumor data has",nrow(tumor.data),"rows"))
 
-# cut the data to the intersect of the data
+# cut the rownames to the intersect of what's available in the normal and the tumor
 target.intersect <- intersect(rownames(normal.data),rownames(tumor.data))
 if (debug) print(paste("intersection of the tumor and normal has ",length(target.intersect),"rows"))
 
 normal.data <- intersect.tumor.normal.targets(normal.data,target.intersect)
 tumor.data <- intersect.tumor.normal.targets(tumor.data,target.intersect)
+baits.filtered <- baits[is.element(baits$name,target.intersect),]
 
 # load up our bait factor
 bait.factor <- read.delim(bait.factor.file)
@@ -137,7 +135,7 @@ bait.factor[bait.factor[,1]<=0,2] = epsilon
 bait.factor = bait.factor[is.element(rownames(bait.factor),rownames(tumor.data)),]
 
 if (TRUE) {
-    # mean center the tumor and normal samples
+    # mean center the tumor samples
     tumor.data = sweep(tumor.data,2,apply(tumor.data,2,mean),"/")
 
     # get the sex assignments; a list of each sex with their associated columns
