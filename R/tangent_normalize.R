@@ -137,12 +137,11 @@ bait.factor[bait.factor[,1]<=0,2] = epsilon
 bait.factor = bait.factor[is.element(rownames(bait.factor),rownames(tumor.data)),]
 
 if (TRUE) {
-
     # mean center the tumor and normal samples
     tumor.data = sweep(tumor.data,2,apply(tumor.data,2,mean),"/")
 
     # get the sex assignments; a list of each sex with their associated columns
-    sex.columns = process.sex.assignments(sex.calls,colnames(tumor.data))
+    sex.columns = process.sex.assignments(sex.calls,colnames(tumordata))
     print(summary(sex.columns))
     # order both our tumors and normals; females then males
     tumor.data <- cbind(tumor.data[!sex.columns],tumor.data[sex.columns])

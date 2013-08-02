@@ -18,7 +18,11 @@ import org.broadinstitute.sting.utils.interval._
 import java.io._
 
 // --------------------------------------------------------------------------------------------------------------------------------
-// CapSeg: the capture based segmentation
+// CapSeg: determining copy number from exome sequencing
+//
+// @author Aaron McKenna
+// @date   August 2nd, 2013
+// @email  aaron@broadinstitute.org
 //
 // --------------------------------------------------------------------------------------------------------------------------------
 class CapSeg extends QScript {
@@ -91,10 +95,10 @@ class CapSeg extends QScript {
   @Argument(doc = "the segment SD setting", shortName = "ssd", required = false)
   var segmentSD = "1.5"
 
-  @Argument(doc = "the threshold to merge segments: segments smaller than this size with be merged with the appropriate neighbor", shortName = "", required = false)
+  @Argument(doc = "the probability threshold for Bayesian segment merging", shortName = "", required = false)
   var segMergeThresh = 1.5
 
-  @Argument(doc = "the probability threshold for Bayesian segment merging", shortName = "msc", required = false)
+  @Argument(doc = "the threshold to merge segments: segments smaller than this size with be merged with the appropriate neighbor", shortName = "msc", required = false)
   var minSegCount = 10
 
   // the command line traits -- defaults for our pipeline
