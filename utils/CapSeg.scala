@@ -236,25 +236,22 @@ class CapSeg extends QScript {
     firehoseInport.close()
 
     // run the final R script which puts it all together
-    add(new PostProcessData(libraryDir,
+    add(new PostProcessData(samples,
+                            libraryDir,
                             normalSampleFile,
                             tumorSampleFile,
                             baitCSV,
-                            true,
-                            new File(outputDir.getAbsolutePath() + "/.cache"),
-                            normalSampleToPGFile,
-                            tumorSampleToPGFile,
+                            normalBamToSampleFile,
+                            normalBamToSampleFile,
                             outputDir,
                             tangentLocation,
                             tangentOutputLocation,
                             build,
                             analysisSet,
-                            perLane,
                             finalNormalMatrixBF,
                             signal,
                             signalFile,
-                            useHistData,
-                            alleleOutput))
+                            useHistData))
   }
 
 
@@ -387,36 +384,31 @@ class SegmentSample(libraryDir: File, bamName: String, bamToSample: File, output
 
 
 // post process the data using the R script
-class PostProcessData(libraryDir: File, normal_bait_coverage: File, tumor_bait_coverage: File, target_file: File,
-                      useCachedData: Boolean, cachedLocation: File, sToRGFileNormals: File, sToRGFileTumors: File,
-                      outputDir: File, tangentLocation: File, tangentOutputLocation: File, buildType: String, analysisSet: String,
-                      byLane: Boolean, normalBaitFile: File, signalFLs: List[File], signalTSV: File, histoData: Boolean, acovFiles: List[File]) extends CommandLineFunction {
-  @Input(doc = "the normal bait output file") var normalFile = normal_bait_coverage
-  @Input(doc = "the tumor bait output file") var tumorFile = tumor_bait_coverage
+class PostProcessData(indTable: File, libraryDir: File, normal_bams: File, tumor_bams: File, target_file: File,
+                      normalBamListing: File, tumorBamListing: File, outputDir: File, tangentLocation: File, tangentOutputLocation: File, 
+                      buildType: String, analysisSet: String,
+                      normalBaitFile: File, signalFLs: List[File], signalTSV: File, histoData: Boolean) extends CommandLineFunction {
+  @Input(doc = "the sample table containing individuals and their t/n bam files") var inds = indTable
+  @Input(doc = "the normal bait output file") var normalFile = normal_bams
+  @Input(doc = "the tumor bait output file") var tumorFile = tumor_bams
   @Input(doc = "the target list") var targetFile = target_file
   @Input(doc = "where can we find the WES segmentation algorithm") var libDir = libraryDir
-  @Input(doc = "the file containing the mapping of sample to read group (normals)") var normalSampleToReadGroupFile = sToRGFileNormals
-  @Input(doc = "the file containing the mapping of sample to read group (tumors)") var tumorSampleToReadGroupFile = sToRGFileTumors
+  @Input(doc = "the file containing the mapping of sample to bams (normals)") var normalBams = tumorBamListing
+  @Input(doc = "the file containing the mapping of sample to bams (tumors)") var tumorBams = normalBamListing
   @Input(doc = "the output location") var outputDirectory = outputDir
   @Input(doc = "tangent normalization database location") var tangentDatabase = tangentLocation
   @Input(doc = "tangent normalization database location") var tangentOutputDatabase = tangentOutputLocation
   @Input(doc = "signal tsv file") var signalTSVFile = signalTSV
-  @Input(doc = "coverage files from the allele balance pulldown") var coverageFiles = acovFiles
 
   @Output(doc = "the signal file outputs") var signalFiles = signalFLs
-  @Output(doc = "the cache location") var cacheLocation = cachedLocation
 
   @Argument(doc = "the build type, hg18 or hg19") var build = buildType
   @Argument(doc = "the analysis name") var analysisSetName = analysisSet
-  @Argument(doc = "are we running by lane?") var byLaneData = byLane
   @Argument(doc = "the normal bait factor file") var nbf = normalBaitFile
   @Argument(doc = "should we use historical data") var uhd = histoData
 
-  //@Output(doc="the sample information file") var sampleInfoFile = new File(outputDir.getAbsolutePath() + "/sampleInformation.txt")
-
-  @Argument(doc = "should we use the cache file") var useCache = useCachedData
-  memoryLimit = Some(16) // change me
-  def commandLine = "Rscript %s/R/tangent_normalize.R --normal.lane.data %s --tumor.lane.data %s --target.list %s --use.cache %s --cache.location %s --script.dir %s --normal.sample.to.lanes.file %s --tumor.sample.to.lanes.file %s --output.location %s --tangent.database.location %s --output.tangent.database %s --build %s --analysis.set.name %s --bylane %s --bait.factor %s --signal.files %s --histo.data %s".format(libDir.getAbsolutePath(), normalFile.getAbsolutePath(), tumorFile.getAbsolutePath(), targetFile.getAbsolutePath(), useCache, cacheLocation.getAbsolutePath(), libDir.getAbsolutePath(), normalSampleToReadGroupFile.getAbsolutePath(), tumorSampleToReadGroupFile.getAbsolutePath(), outputDirectory.getAbsolutePath(), tangentDatabase.getAbsolutePath(), tangentOutputDatabase.getAbsolutePath(), build, analysisSetName,byLaneData, nbf.getAbsolutePath(), signalTSVFile.getAbsolutePath(), uhd)
+  memoryLimit = Some(8) 
+  def commandLine = "Rscript %s/R/tangent_normalize.R --sample.table %s --normal.lane.data %s --tumor.lane.data %s --target.list %s --script.dir %s --normal.sample.bams %s --tumor.sample.bams %s --output.location %s --tangent.database.location %s --output.tangent.database %s --build %s --analysis.set.name %s --bait.factor %s --signal.files %s --histo.data %s".format(libDir.getAbsolutePath(), indTable.getAbsolutePath(), normalFile.getAbsolutePath(), tumorFile.getAbsolutePath(), targetFile.getAbsolutePath(), libDir.getAbsolutePath(), normalBams.getAbsolutePath(), tumorBams.getAbsolutePath(), outputDirectory.getAbsolutePath(), tangentDatabase.getAbsolutePath(), tangentOutputDatabase.getAbsolutePath(), build, analysisSetName, nbf.getAbsolutePath(), signalTSVFile.getAbsolutePath(), uhd)
 }
 
 // correct the output files for any dups lines and extra headers

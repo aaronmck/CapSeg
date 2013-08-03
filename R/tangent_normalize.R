@@ -15,20 +15,17 @@ option.list <- list(
                make_option(c("--tumor.lane.data"),help="the tumor exome coverage: lanes as rows, exome targets (or baits) as rows",default="blank"),
                make_option(c("--target.list"),help="the list of targets we captured in sequencing",default="blank"),
                make_option(c("--script.dir"),help="where we can find the wesseg scripts - where you placed the checked out tool into",default="blank"),
-               make_option(c("--normal.sample.to.bam.file"),help="the file containing the mapping of the sample names (for normals) to bam files",default="blank"),
-               make_option(c("--tumor.sample.to.bam.file"),help="the file containing the mapping of the sample names (for tumors) to bam files",default="blank"),
+               make_option(c("--normal.sample.bams"),help="the file containing the mapping of the sample names (for normals) to bam files",default="blank"),
+               make_option(c("--tumor.sample.bams"),help="the file containing the mapping of the sample names (for tumors) to bam files",default="blank"),
                make_option(c("--output.location"),help="where to write output files to - the segmentation results plus any graphs",default="blank"),
                make_option(c("--tangent.database.location"),help="the directory of tangent planes to normalize against; this directory should contain only tangent planes",default="blank"),
                make_option(c("--output.tangent.database"),help="the directory where we put the output tangent data",default="blank"),
                make_option(c("--build"),help="are we running with hg18 and hg19",default="blank"),
                make_option(c("--analysis.set.name"),help="what was the name of the analysis set",default="blank"),
-               make_option(c("--bylane"),help="is the data coming in by lane? (if not it should be by sample)",default="blank"),
-               make_option(c("--parallel"),help="should we merge lanes to samples in parallel",default="blank"),
                make_option(c("--bait.factor"),help="the bait factor data file",default="blank"),
                make_option(c("--bam.file.listing"),help="the listing of bam files, by tumor and by normal",default="blank"),
                make_option(c("--signal.files"),help="the sample name to signal file",default="blank"),
                make_option(c("--use.histo.data"),help="should we use historical data",default="blank"),
-               make_option(c("--sex.calls"),help="a file mapping the id to the sex of each patient",default="blank"),
                make_option(c("--debug"),help="dump lots of debugging data to the <output_dir>/debug directory",default="blank")
 )
 opt <- parse_args(OptionParser(option_list=option.list))
@@ -154,8 +151,11 @@ female.normals <- normal.data[,is.element(colnames(normal.data),sex.calls$sample
 male.calibrated <- calibrate.and.pi.tumors(male.tumors,male.normals)
 female.calibrated <- calibrate.and.pi.tumors(female.tumors,female.normals)
 
+# put together the calibrated data
+calibrated.tumors <- cbind(male.calibrated,female.calibrated)
+
 # save off the data to a Rdata object for later
-save.off.processed.data(log.normals,log.tumors,calibrated.tumors,baits,paste(tangent.database.output,build.version,sep="/"),analysis.set.name,build.version)
+save.off.processed.data(log2(normal.data),log2(tumor.data),calibrated.tumors,baits,paste(tangent.database.output,build.version,sep="/"),analysis.set.name,build.version)
 
 # output the raw data and plots for each sample
 output.and.plot.data(calibrated.tumors,tumor.data,baits,output.location,signal.files)
