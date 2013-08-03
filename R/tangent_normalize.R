@@ -10,14 +10,13 @@ library(optparse)
 # require("genomic_plot.R")
 option.list <- list(
 		# we include the R dat files from
+               make_option(c("--sample.table"),help="the file containing the mapping individuals to their tumor and normal bams",default="blank"),
                make_option(c("--normal.lane.data"),help="the normal exome coverage: lanes as rows, exome targets (or baits) as rows",default="./"),
                make_option(c("--tumor.lane.data"),help="the tumor exome coverage: lanes as rows, exome targets (or baits) as rows",default="blank"),
                make_option(c("--target.list"),help="the list of targets we captured in sequencing",default="blank"),
                make_option(c("--script.dir"),help="where we can find the wesseg scripts - where you placed the checked out tool into",default="blank"),
-               make_option(c("--normal.sample.to.lanes.file"),help="the file containing the mapping of the read groups to the sample names (for normals)",default="blank"),
-               make_option(c("--tumor.sample.to.lanes.file"),help="the file containing the mapping of the read groups to the sample names (for tumors)",default="blank"),
-               make_option(c("--normal.to.bam"),help="the file matching the normal bam to the sample",default="blank"),
-               make_option(c("--tumor.to.bam"),help="the file matching for tumor bam to the sample",default="blank"),
+               make_option(c("--normal.sample.to.bam.file"),help="the file containing the mapping of the sample names (for normals) to bam files",default="blank"),
+               make_option(c("--tumor.sample.to.bam.file"),help="the file containing the mapping of the sample names (for tumors) to bam files",default="blank"),
                make_option(c("--output.location"),help="where to write output files to - the segmentation results plus any graphs",default="blank"),
                make_option(c("--tangent.database.location"),help="the directory of tangent planes to normalize against; this directory should contain only tangent planes",default="blank"),
                make_option(c("--output.tangent.database"),help="the directory where we put the output tangent data",default="blank"),
@@ -43,12 +42,12 @@ library("corpcor")
 options(check.names=F)
 
 # now source the path to some of our utilities
-wes.working.dir = opt$script.dir
-source(paste(wes.working.dir,"/R/data_loading.R",sep="")) #,verbose=T)
-source(paste(wes.working.dir,"/R/output_data.R",sep="")) #,verbose=T)
-source(paste(wes.working.dir,"/R/command_line_utils.R",sep="")) #,verbose=T)
-source(paste(wes.working.dir,"/R/genomic_plot.R",sep="")) #,verbose=T)
-source(paste(wes.working.dir,"/R/data_transformations.R",sep="")) #,verbose=T)
+code.dir = opt$script.dir
+source(paste(code.dir,"/R/data_loading.R",sep="")) #,verbose=T)
+source(paste(code.dir,"/R/output_data.R",sep="")) #,verbose=T)
+source(paste(code.dir,"/R/command_line_utils.R",sep="")) #,verbose=T)
+source(paste(code.dir,"/R/genomic_plot.R",sep="")) #,verbose=T)
+source(paste(code.dir,"/R/data_transformations.R",sep="")) #,verbose=T)
 
 # post process the file
 args <- post.process.commandline(opt)
@@ -56,6 +55,7 @@ args <- post.process.commandline(opt)
 # -------------------------------------------------------------------------------
 # load the command line arguments into local variables (with some post-processing)
 # -------------------------------------------------------------------------------
+sample.table      			<- args$sample.table
 normal.lane.data				<- args$normal.lane.data
 tumor.lane.data					<- args$tumor.lane.data
 target.list.file				<- args$target.list
@@ -73,8 +73,6 @@ by.lane 					    <- args$bylane
 lane.parallel 					<- args$parallel != "blank"
 bait.factor.file 				<- args$bait.factor
 bam.file.listing                <- args$bam.file.listing
-tumor.to.bam                    <- args$tumor.to.bam
-normal.to.bam                   <- args$normal.to.bam
 signal.files                    <- args$signal.files
 use.histo.data                  <- toupper(args$use.histo.data) == "TRUE"
 debug                           <- toupper(args$debug) == "TRUE"
@@ -93,12 +91,11 @@ epsilon <- .Machine$double.eps * 10^6
 # options(error=dump.frames)
 
 # create the output directory and the cache directory if needed, and setup some debug logging locations (used only if debug == T)
-dir.create(output.location,recursive=T, showWarnings=F)
+create.dir.if.missing(output.location)
 if (debug) {
     debug.location = paste(output.location,"debug",sep="/")
-    print(paste("debug location: ",debug.location))
-    dir.create(debug.location,recursive=T)
-    sink(paste(output.location,"debug","debugging_log.txt",sep="/"))
+    create.dir.if.missing(debug.location)
+    #sink(paste(output.location,"debug","debugging_log.txt",sep="/"))
     save.image(paste(debug.location,".parameters.Rdata",sep="/")) # save off a copy of the parameters we used for the run
 }
 
@@ -117,7 +114,7 @@ baits <- data.frame(baits[!duplicated(baits$name),])
 if (debug) print(paste("Starting to load the data at",format(Sys.time(), "%a %b %d %H:%M:%S %Y")))
 
 tumor.data <- load.exome.data(tumor.lane.data)
-normal.data <- load.exome.data(normal.lane.data,normal=TRUE)
+normal.data <- load.exome.data(normal.lane.data)
 
 if (debug) print(paste("Intersecting the normal and tumor bait lists, normal data has",nrow(normal.data),"rows, tumor data has",nrow(tumor.data),"rows"))
 
@@ -128,6 +125,16 @@ if (debug) print(paste("intersection of the tumor and normal has ",length(target
 normal.data <- intersect.tumor.normal.targets(normal.data,target.intersect)
 tumor.data <- intersect.tumor.normal.targets(tumor.data,target.intersect)
 baits.filtered <- baits[is.element(baits$name,target.intersect),]
+
+# quality control the normal coverage
+qc.report.directory = paste(output.location,"/normal_tissue_qc_files/",sep="")
+create.dir.if.missing(qc.report.directory)
+normal.data = qc.normal.samples(normal.data, tumor.data, baits.filtered, qc.report.directory, allowed.normal.dev=0.3, allowed.normal.arm.dev=0.5)
+
+# create sex calls (guesses) for each individual
+sex.calls = create.sex.assignments(tumor.data,normal.data,sample.table,baits.filtered,"Y","X")
+# and write this table out
+write.table(sex.calls,file=paste(output.location,"sex.calls.txt",sep="/"),sep="\t",quote=F,row.names=F)
 
 # load up our bait factor
 bait.factor <- read.delim(bait.factor.file)

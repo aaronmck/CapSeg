@@ -14,3 +14,14 @@ post.process.commandline <- function(optparse.args) {
   }
   return(ret)
 }
+
+#' create a directory if it doesn't exist
+#' 
+#' @return a post processed version of the object, with boolean represented as such,
+#' @param an optparse object, with variables as named strings
+#'   	integers converted, etc
+#' @keywords command line parse
+create.dir.if.missing <- function(direct) {
+  if (!file.exists(direct))
+    dir.create(direct,recursive=T)
+}  
