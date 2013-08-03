@@ -15,44 +15,6 @@ intersect.tumor.normal.targets = function(normal.data,intersecting.baits) {
   return(normal.data)
 }
 
-#' given the input data matrix and a set of chromosomes, return a list of matricies, one for each
-#' sex chromosome, plus one default with the remaining chromosomes (stored as autosome in return matrix)
-#'
-#' @param input.data the data matrix of all of the coverage across all targets
-#' @param sex.chromosome.list the list of sex chromosomes; each of which should be split ou
-#' @param list.of.baits the list of baits; we use this to map baits to chromosomes to split out the data. format: target_name, chr, start, stop (1 based)
-#' @return the split out autosomes and germline chromosomes as a list of matricies
-#' @keywords split sex chromosome
-#'
-split.out.sex.chromosomes = function(input.data,sex.chromosome.list,list.of.baits) {
-    all.baits = list.of.baits[,1]
-    return.list = list()
-    for (chr in sex.chromosome.list) {
-        chr.baits <- list.of.baits[list.of.baits[,2]==chr,1]
-        sub.matrix <- input.data[is.element(rownames(input.data),chr.baits),]
-        return.list[[chr]] = sub.matrix
-        all.baits = all.baits[!is.element(all.baits,chr.baits)]
-    }
-    autosome.data <- input.data[is.element(rownames(input.data),all.baits),]
-    return.list[["autosome"]] = autosome.data
-    return(return.list)
-}
-
-#' given an input matrix, mean center the data and log transform (setting any pre-log zero values to epsilon)
-#'
-#' @param input.data our input data matrix
-#' @return the mean centered and log transformed data
-#' @keywords split sex chromosome
-#'
-mean.center.log.transform = function(input.data) {
-    td.mean = apply(input.data,2,mean)
-    td.data = input.data / td.mean
-    td.data[abs(td.data) < epsilon] = epsilon
-    log.input = data.frame(log2(td.data),check.names=F)
-    #print(colnames(log.input))
-    return(log.input)
-}
-
 
 #' given a pseudo inverse matrix and a case matrix, return the multiplication
 #' @param log.tumor the tumor data in log space
@@ -102,15 +64,45 @@ calibrate.tumors <- function(log.tumor,pseudo.inverse,log.normals.cr, center, fi
 	return(tumor.matrix)
 }
 
-#' tangent normalize the tumors by the normals
-#' @param normal.data the normal data matrix
-#' @return the pseudo inverse (in log 2 space) of the normal matrix
+#' calibrate and pseudo.inverse males and females seperately
+#' @param tumor.data the tumor data file
+#' @param normal.data the normal data file
+#' @return calibrated.tumors our calibrated tumor file
 #' @keywords exome coverage tangent pseudo inverse
 #'
-pseudo.invert.normals = function(log.normals.cr) {
-  # any zeros become epsilons
-  print("performing pseudo inverse")
-
+calibrate.and.pi.tumors = function(tumor.data,normal.data) {
+  
+  # now calculate the tumor and normal tangents independently for each sex
+  td.mean = apply(tumor.data,2,mean)
+  tumor.data = tumor.data / td.mean
+  tumor.data[abs(tumor.data) < epsilon] = epsilon
+  log.tumors = data.frame(log2(tumor.data))
+  
+  normal.data[abs(normal.data) < epsilon] = epsilon
+  log.normals = data.frame(log2(normal.data))
+  
+  # do the initial block normalization
+  bgs.center = rep(mean(colMeans(log.normals)),nrow(log.normals)) # rep(0.0,nrow(normal.data)) # log.normals[,ncol(log.normals)] # rep(0.0,nrow(normal.data))
+  names(bgs.center) <- rownames(log.normals)
+  log.normals = data.frame(log.normals[,1:ncol(log.normals)] - bgs.center)
+  log.tumors = data.frame(log.tumors - bgs.center)
+  
+  print("Data loaded and means and log values calculated...")
+  #load up the whole data set into the tangent normalization process, and calibrate each tumor against the matrix
+  if (use.histo.data) {
+    print("loading the historical data...")
+    log.normals = additional.normals(tangent.database.location,log.normals,build.version,analysis.set.name)
+  }
+  
+  target.intersect <- intersect(rownames(log.normals),rownames(log.tumors))
+  log.normals <- intersect.tumor.normal.targets(log.normals,target.intersect)
+  log.tumors <- intersect.tumor.normal.targets(log.tumors,target.intersect)
+  
+  print("About to perform the SVD (PI)")
+  pseudo.inverse.norm  <- pseudoinverse(data.matrix(log.normals))
+  calibrated.tumors <- calibrate.tumors(data.matrix(log.tumors),data.matrix(pseudo.inverse.norm),data.matrix(log.normals),bgs.center,first=TRUE)
+  colnames(calibrated.tumors) <- colnames(tumor.data)
+  return(calibrated.tumors)
 }
 
 #' make a big panel of normals out of the database that we have on disk

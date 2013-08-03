@@ -104,6 +104,12 @@ create.sex.assignments <- function(tumor.data,
   tumor.male.coverage <- apply(tumor.data[male.coverage.targets,],2,mean)
   tumor.female.coverage <- apply(tumor.data[female.coverage.targets,],2,mean)
   
+  # remove any duplicated entries
+  normal.male.coverage <- normal.male.coverage[!duplicated(names(normal.male.coverage))]
+  normal.female.coverage <- normal.female.coverage[!duplicated(names(normal.female.coverage))]
+  tumor.male.coverage <- tumor.male.coverage[!duplicated(names(tumor.male.coverage))]
+  tumor.female.coverage <- tumor.female.coverage[!duplicated(names(tumor.female.coverage))]
+  
   for (ind in sample.table$sample) {
     sample.ratio = 1.0 # our default will be in the female range
     call.type = "UNK"
