@@ -81,8 +81,17 @@ vcf.calls.file                  <- args$call.database
 removeBadBaitsAndLanes = T # TRUE
 optimize.bf = F # optimize those baits!
 calibrate.against.others = T
-sex.chromosomes = c("X","Y")
 
+
+if (build.version == "hg19") {
+  sex.chromosomes = c("X","Y") # this should get loaded based on the platform
+} else if (build.version == "hg18") {
+  sex.chromosomes = c("chrX","chrY") # this should get loaded based on the platform
+} else if (build.version == "mm9") {
+  sex.chromosomes = c("chrX","chrY") # this should get loaded based on the platform
+} else {
+  print(paste("Unable to work with build version provided:",build.version,"expected hg18, hg19, mm9"))
+}
 # our epsilon value - used to make sure we're not producing log(0) calls
 epsilon <- .Machine$double.eps * 10^6
 # options(error=dump.frames)
