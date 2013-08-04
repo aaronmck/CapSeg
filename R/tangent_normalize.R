@@ -59,8 +59,8 @@ target.list.file				<- args$target.list
 try.use.cached.data				<- args$use.cache
 cached.location 				<- args$cache.location
 wes.working.dir 				<- args$script.dir
-normal.lanes.to.samples.file	<- args$normal.sample.to.lanes.file
-tumor.lanes.to.samples.file		<- args$tumor.sample.to.lanes.file
+normal.lanes.to.samples.file	<- args$normal.sample.bams
+tumor.lanes.to.samples.file		<- args$tumor.sample.bams
 output.location					<- args$output.location
 tangent.database.location		<- args$tangent.database.location
 tangent.database.output		    <- args$output.tangent.database
