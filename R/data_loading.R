@@ -29,14 +29,14 @@ qc.normal.samples = function(normal.data, tumor.data, baits.filtered, qc.report.
   
   normal.cr.plt = ggplot(total.mean,aes(x=mean,y=rownames(total.mean),col=type)) + geom_point() + theme_bw()
   ggsave(normal.cr.plt,file=paste(qc.report.directory,"normal_copy_ratio.jpg",sep="/"))
-  
+  print(summary(total.mean))
   # now exclude any normal where it's CR value is way out of line, one plus or minus allowed.normal.dev
   normal.excluded = total.mean[total.mean$type=="NORMAL" & abs(1.0 - total.mean$mean) > allowed.normal.dev, ]
   normal.data <- normal.data[,!is.element(paste(colnames(normal.data),"Normal",sep="."),rownames(normal.excluded))]
   
   # now mean center the data for the arm level check -- if we see greater deviation that expected at the arm level, drop that sample
   normal.data = sweep(normal.data,2,apply(normal.data,2,mean),"/")
-  
+  print(summary(total.mean))
   # now exclude any normals where the arm level copy ratio of any arm exceeds our threshold
   total.mean <- cbind(total.mean,0.0)
   colnames(total.mean) <- c("mean","type","arm.dev")
