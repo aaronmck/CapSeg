@@ -7,6 +7,8 @@
 #' @note current version was created on March 19th, 2012
 
 library(optparse)
+library(ggplot2)
+
 # require("genomic_plot.R")
 option.list <- list(
 		# we include the R dat files from
