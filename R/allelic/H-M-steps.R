@@ -19,15 +19,15 @@ SegPostSdExtreme <- function(snp.d, cn.d, delta.tau, out.p, h.snp.gt.p, theta) {
 		e.mu <-  c(((total / 2) - (dist / 2)), ((total / 2) + (dist / 2)), total)
 		
 		logliks = c(
-				sum(AffyCalcSnpLogLik(snp.d, e.mu, out.p, h.snp.gt.p, theta)),
-				sum(AffyCalcCnLogLik(cn.d, e.mu, out.p, theta))
+				sum(CalcSnpLogLik(snp.d, e.mu, out.p, h.snp.gt.p, theta)),
+				sum(CalcCnLogLik(cn.d, e.mu, out.p, theta))
 #				sum(CalcCaptureLogLik(capseg.d, e.mu, out.p, theta))
 				)
 		logliks = logliks[!is.nan(logliks)]
 		res = -sum( logliks)
 		return(res)
 	}
-	h1.mode <- AffyGetMeans(delta.tau[1], delta.tau[2])
+	h1.mode <- GetMeans(delta.tau[1], delta.tau[2])
 	m.delta <- abs(h1.mode[1] - h1.mode[2])
 	m.tau <- h1.mode[3]
 	hess.mat <- hessian(CobCalcLL, x=c(m.delta, m.tau))
@@ -48,7 +48,7 @@ SegPostSd <- function(d, e.mu, out.p, het.prob, theta) {
     dist <- par[1]
     total <- par[2]
     e.mu <-  c(((total / 2) - (dist / 2)), ((total / 2) + (dist / 2)), total)
-    res <- -sum(AffyCalcSnpLogLik(d, e.mu, out.p, het.prob, theta))
+    res <- -sum(CalcSnpLogLik(d, e.mu, out.p, het.prob, theta))
 
     return(res)
   }
@@ -71,8 +71,7 @@ SegPostSd <- function(d, e.mu, out.p, het.prob, theta) {
   return(se)
 }
 
-
-HThetaOpt <- function(h.seg.dat, delta.tau, out.p, theta, parname, limits, symbol, opttol, probe.types, verbose=FALSE) {
+HThetaOptExtreme <- function(h.seg.dat, delta.tau, out.p, theta, parname, limits, symbol, opttol, probe.types, verbose=FALSE) {
 
 	LL <- function(par) {
 		theta[parname] <- par
@@ -81,12 +80,41 @@ HThetaOpt <- function(h.seg.dat, delta.tau, out.p, theta, parname, limits, symbo
 		seg.loglik <- rep(0, delta.tau.rows)
 		for (s in 1:delta.tau.rows) {
 			
-			logliks = c( sum(AffyCalcSnpLogLik(h.seg.dat[["h.snp.d"]][[s]], delta.tau[s, ], out.p, h.seg.dat[["h.snp.gt.p"]][[s]], theta)), 
-							sum( AffyCalcCnLogLik(h.seg.dat[["h.cn.d"]][[s]], delta.tau[s, ], out.p, theta)) )
-			seg.loglik[s] = sum(logliks)
+			logliks = c( sum(CalcSnpLogLik(h.seg.dat[["h.snp.d"]][[s]], delta.tau[s, ], out.p, h.seg.dat[["h.snp.gt.p"]][[s]], theta)), 
+							sum( CalcCnLogLik(h.seg.dat[["h.cn.d"]][[s]], delta.tau[s, ], out.p, theta)), 
+							sum( CalcCaptureLogLik(h.seg.dat[["h.capseg.d"]][[s]], delta.tau[s, 2], out.p, theta ))
+							)
+			seg.loglik[s] = sum(logliks[c("snp", "cn", "cap") %in% probe.types])
 			
 		}
-		cur.loglik <- sum(seg.loglik)
+		cur.loglik <- sum(seg.loglik[complete.cases(seg.loglik)])
+		
+		if (verbose) {
+			if (!is.finite(cur.loglik)) {
+				print(paste(parname, ": Non-finite log-liklihood!", sep=""))
+			} else {
+				cat(symbol)
+			}
+		}
+		
+		return(-cur.loglik)
+	}
+	
+	res <- optimize(LL, lower=limits[["lower"]], upper=limits[["upper"]], tol=opttol, maximum=FALSE)
+	
+	return(res[["minimum"]])
+}
+
+HThetaOptCapture <- function(h.seg.dat, tau, out.p, theta, parname, limits, symbol, opttol, verbose=FALSE) {
+	LL <- function(par) {
+		theta[parname] <- par
+		
+		# seg.loglik <- rep(0, tau.rows)
+		# for (s in 1:tau.rows) {
+		seg.loglik <- foreach(s=1:length(tau), .combine=c) %dopar% {
+			sum( CalcCaptureLogLik(h.seg.dat[["h.capseg.d"]][[s]], tau[s], out.p, theta )) 
+		}
+		cur.loglik <- sum(seg.loglik[complete.cases(seg.loglik)])
 		
 		if (verbose) {
 			if (!is.finite(cur.loglik)) {
@@ -105,24 +133,18 @@ HThetaOpt <- function(h.seg.dat, delta.tau, out.p, theta, parname, limits, symbo
 }
 
 
-HThetaOptExtreme <- function(h.seg.dat, delta.tau, out.p, theta, parname, limits, symbol, opttol, probe.types, verbose=FALSE) {
-
-
+HThetaOpt <- function(h.d, h.snp.gt.p, h.e.mu, out.p, theta, parname, limits, symbol, opttol, verbose=FALSE) {
 	LL <- function(par) {
 		theta[parname] <- par
 		
-		delta.tau.rows <- nrow(delta.tau)
-		seg.loglik <- rep(0, delta.tau.rows)
-		for (s in 1:delta.tau.rows) {
-			
-			logliks = c( sum(AffyCalcSnpLogLik(h.seg.dat[["h.snp.d"]][[s]], delta.tau[s, ], out.p, h.seg.dat[["h.snp.gt.p"]][[s]], theta)), 
-							sum( AffyCalcCnLogLik(h.seg.dat[["h.cn.d"]][[s]], delta.tau[s, ], out.p, theta)), 
-							sum( CalcCaptureLogLik(h.seg.dat[["h.capseg.d"]][[s]], delta.tau[s, 2], out.p, theta ))
-							)
-			seg.loglik[s] = sum(logliks[c("snp", "cn", "cap") %in% probe.types])
-			
+		h.e.mu.rows <- nrow(h.e.mu)
+		seg.loglik <- rep(0, h.e.mu.rows)
+		
+		for (s in 1:h.e.mu.rows) {
+			snp.loglik <- CalcSnpLogLik(h.d[[s]], h.e.mu[s, ], out.p, h.snp.gt.p[[s]], theta)
+			seg.loglik[s] <- sum(snp.loglik)
 		}
-		cur.loglik <- sum(seg.loglik[complete.cases(seg.loglik)])
+		cur.loglik <- sum(seg.loglik)
 		
 		if (verbose) {
 			if (!is.finite(cur.loglik)) {

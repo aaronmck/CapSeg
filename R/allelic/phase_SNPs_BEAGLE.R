@@ -8,7 +8,8 @@
 ## whatsoever. Neither the Broad Institute nor MIT can be responsible for its
 ## use, misuse, or functionality.
 
-PhaseSnps <- function(h.snp.clust.p, h.snp.gt.p, h.snp.annot, platform, tmp.dir, plate.name, phased.bgl.dir, verbose=FALSE) {
+PhaseSnps <- function(h.snp.clust.p, h.snp.gt.p, h.snp.annot,
+                      platform, tmp.dir, plate.name, phased.bgl.dir, verbose=FALSE) {
   ## kMinSnps was originally passed in but was passed in as a constant
   ## value so redefining it here
   kMinSnps <- 100
@@ -27,11 +28,11 @@ PhaseSnps <- function(h.snp.clust.p, h.snp.gt.p, h.snp.annot, platform, tmp.dir,
     n.snp <- nrow(h.snp.clust.p[[s]])
     new.h.snp.gt.p[[s]] <- h.snp.gt.p[[s]] 
     unfixed.h.snp.clust.p[[s]] <- h.snp.clust.p[[s]]
-    
+
     allele.tab <- array(h.snp.clust.p[[s]], dim=c(1, n.snp, 5))
-	  dnames = list()
-	  dnames[[2]] = rownames(h.snp.gt.p[[s]])
-	  dimnames(allele.tab) <- dnames
+	dnames = list()
+	dnames[[2]] = rownames(h.snp.gt.p[[s]])
+	dimnames(allele.tab) <- dnames
 
     chr <- h.snp.annot[[s]][["chr"]]
     dbSNP.annot <- h.snp.annot[[s]][["dbSNP"]]
@@ -78,7 +79,9 @@ PhaseSnps <- function(h.snp.clust.p, h.snp.gt.p, h.snp.annot, platform, tmp.dir,
     cat("\n")
   }
   
-  return(list(h.snp.gt.p=new.h.snp.gt.p, unfixed.h.snp.clust.p=unfixed.h.snp.clust.p, h.switch.ix=h.switch.ix))
+  return(list(h.snp.gt.p=new.h.snp.gt.p,
+              unfixed.h.snp.clust.p=unfixed.h.snp.clust.p,
+              h.switch.ix=h.switch.ix))
 }
 
 HmmResolveSwitchErrors <- function(phased.snp.clust.p, snp.clust.p,

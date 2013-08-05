@@ -57,45 +57,33 @@ SetCapturePlatformSpecificFuncs <- function() {
   return(TRUE)
 }
 
-# SetAffyPlatformSpecificFuncsDEP <- function() {
-#   InitTheta <<- AffyInitTheta
-#   InitThetaExtreme <<- AffyInitThetaExtreme
-#   ThetaOpt <<- AffyThetaOpt
-#   ThetaOptExtreme <<- AffyThetaOptExtreme
-#   InitCnBg <<- AffyInitCnBg
-#   Atten <<- AffyAtten
-#   InvAtten <<- AffyInvAtten
-#   TauPlatformSpecificInitialization <<- AffyTauPlatformSpecificInitialization
-#   PlatformSpecificOptimization <<- AffyPlatformSpecificOptimization
-#   PlatformSpecificOptimizationExtreme <<- AffyPlatformSpecificOptimizationExtreme
-#   GetMeans <<- AffyGetMeans
-#   GetTau <<- AffyGetTau
-#   GetDelta <<- AffyGetDelta
-#   GetLL <<- AffyGetLL
-#   DeltaTauOptumExtreme <<- AffyDeltaTauOptumExtreme
-#   CalcSnpLogLik <<- AffyCalcSnpLogLik
-#   CalcCnLogLik <<- AffyCalcCnLogLik
-#   GetSnpClustLik <<- AffyGetSnpClustLik
-#   DmvFunc <<- AffyDmvFunc
+SetAffyPlatformSpecificFuncs <- function() {
+  InitTheta <<- AffyInitTheta
+  InitThetaExtreme <<- AffyInitThetaExtreme
+  ThetaOpt <<- AffyThetaOpt
+  ThetaOptExtreme <<- AffyThetaOptExtreme
+  InitCnBg <<- AffyInitCnBg
+  Atten <<- AffyAtten
+  InvAtten <<- AffyInvAtten
+  TauPlatformSpecificInitialization <<- AffyTauPlatformSpecificInitialization
+  PlatformSpecificOptimization <<- AffyPlatformSpecificOptimization
+  PlatformSpecificOptimizationExtreme <<- AffyPlatformSpecificOptimizationExtreme
+  GetMeans <<- AffyGetMeans
+  GetTau <<- AffyGetTau
+  GetDelta <<- AffyGetDelta
+  GetLL <<- AffyGetLL
+  GetLLExtreme <<- AffyGetLLExtreme
+  DeltaTauOptumExtreme <<- AffyDeltaTauOptumExtreme
+  CalcSnpLogLik <<- AffyCalcSnpLogLik
+  CalcCnLogLik <<- AffyCalcCnLogLik
+  GetSnpClustLik <<- AffyGetSnpClustLik
+  DmvFunc <<- AffyDmvFunc
 
-#   return(TRUE)
-# }
-
-# SetAffyAndCaptureFuncs <- function() {
-#   Atten <<- AffyAtten
-#   InvAtten <<- AffyInvAtten
-#   PlatformSpecificOptimization <<- AffyPlatformSpecificOptimization
-#   GetMeans <<- AffyGetMeans
-#   CalcSnpLogLik <<- AffyCalcSnpLogLik
-#   CalcCnLogLik <<- AffyCalcCnLogLik
-#   GetSnpClustLik <<- AffyGetSnpClustLik
-#   DmvFunc <<- AffyDmvFunc
-
-#   return(TRUE)
-# }
+  return(TRUE)
+}
   
 DFunc <- function(x, mu, sigma, nu) {
-  return(d_scaled_t(x, mu, sigma, nu))
+  return(DScaledT(x, mu, sigma, nu))
 }
 
 ExomeDFunc = function(x, tau, theta) {
@@ -108,11 +96,10 @@ DoCalcSnpLogLik <- function(d, delta.tau, out.p, snp.gt.p, theta) {
   ## following parameters:
   ## d - the input data, containing a row for each allel (A & B)
   ## e.mu - the error model
-  if (length(d) == 0 ) return(0)
-  clust.lik <- AffyGetSnpClustLik(d, delta.tau, theta)
+  clust.lik <- GetSnpClustLik(d, delta.tau, theta)
 
   snp.gt.p <- snp.gt.p * (1 - out.p)
-  cp <- cbind(snp.gt.p, out.p) 
-  
+  cp = cbind(snp.gt.p, out.p) 
+
   return(log(rowSums(cp * clust.lik)))
 }

@@ -9,7 +9,7 @@
 ## use, misuse, or functionality.
 
 EStep <- function(d, delta.tau, snp.gt.p, out.p, theta) {
-   clust.lik <- AffyGetSnpClustLik(d, delta.tau, theta)
+   clust.lik <- GetSnpClustLik(d, delta.tau, theta)
 
    ## use priors for SNP allele frequency data
    snp.gt.p <- snp.gt.p * (1 - out.p)

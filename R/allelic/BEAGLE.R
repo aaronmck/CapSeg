@@ -10,7 +10,6 @@
 
 CallBeagle <- function(chr, allele.tab, dbSNP.annot, platform,
                        tmp.dir, plate.name, phased.bgl.dir, verbose=FALSE) {  
-
   kNImp <- 0
   kNIter <- 10
   

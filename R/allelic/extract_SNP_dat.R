@@ -11,10 +11,12 @@
 
 
 
-ExtractCaptureDat <- function(capseg.probe.fn=NULL, seg.dat, germline.het.fn, drop.x, drop.y, verbose=FALSE, germline.het.file.parser=DefaultGermlineHetFileParser) {
+ExtractCaptureDat <- function(capseg.probe.fn=NULL, seg.dat, germline.het.fn, tumor.sample.barcode,
+  verbose=FALSE,
+  germline.het.file.parser=DefaultGermlineHetFileParser) {
   
-  capseg.d = DefaultCapsegFileParser(capseg.probe.fn, drop.x=drop.x, drop.y=drop.y)
-  germline.hets = germline.het.file.parser(germline.het.fn)
+  capseg.d = DefaultCapsegFileParser(capseg.probe.fn)
+  germline.hets = germline.het.file.parser(germline.het.fn, tumor.sample.barcode)
   
   h.seg.dat <- GetCaptureAsSegs(seg.dat, capseg.d, germline.hets, verbose=verbose)
 
@@ -26,21 +28,17 @@ ExtractArrayDat <- function(array.name, genome.build, use.pop, use.normal,
   normal, impute.gt, adj.atten, platform, 
   seg.dat, snp.fn, cn.fn,
   calls.fn, mn.sample,
-  platform.vals.fn,
   calibrate.data=FALSE, clusters.fn=NULL, verbose=FALSE,
   snp.file.parser=DefaultSnpFileParser,
   cn.file.parser=DefaultCnFileParser,
   clusters.file.parser=DefaultClusterFileParser) {
 
-  # data(list=GetPlatformDataName(platform), package="HAPSEG")
-  # if (! genome.build %in% names(platform.annots)) {
-  #   stop("Unsupported genome build, ", genome.build,
-  #     ", for this platform: ", platform)
-  # }
-  # platform.vals <- mget(c("snp.freqs", "dbSNP.annot", "snp.annot", "post.birdseed.calibration"), env=platform.annots[[genome.build]])
-  if (verbose) print(paste("Using plaform values from:", platform.vals.fn, "with platform set to:", platform))
-  platform.vals <- readRDS(platform.vals.fn)
-
+  data(list=GetPlatformDataName(platform), package="HAPSEG")
+  if (! genome.build %in% names(platform.annots)) {
+    stop("Unsupported genome build, ", genome.build,
+      ", for this platform: ", platform)
+  }
+  platform.vals <- mget(c("snp.freqs", "dbSNP.annot", "snp.annot", "post.birdseed.calibration"), env=platform.annots[[genome.build]])
   snp.freqs <- platform.vals[["snp.freqs"]]
   dbSNP.annot <- platform.vals[["dbSNP.annot"]]
   snp.annot <- platform.vals[["snp.annot"]]
@@ -92,10 +90,9 @@ ExtractArrayDat <- function(array.name, genome.build, use.pop, use.normal,
 
 
 ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.pop, use.normal,
-  normal, impute.gt, adj.atten, 
+  normal, impute.gt, adj.atten, platform, 
   seg.dat, snp.fn=NULL, cn.fn,  capseg.probe.fn=NULL, germline.het.fn, tumor.sample.barcode,
-  calls.fn, mn.sample, drop.x, drop.y,
-  platform.vals.fn,
+  calls.fn, mn.sample,
   calibrate.data=FALSE, clusters.fn=NULL, verbose=FALSE,
   snp.file.parser=DefaultSnpFileParser,
   cn.file.parser=DefaultCnFileParser,
@@ -105,19 +102,19 @@ ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.po
 	## Returns:
 	## seg.dat - segmentation data file
 	## as.res - allele specific segmentation data from all probe types
+	
 
-  platform <- "SNP_6.0"
-  # data(list=GetPlatformDataName(platform), package="HAPSEG")
-  # if (! genome.build %in% names(platform.annots)) stop("Unsupported genome build, ", genome.build, ", for this platform: ", platform)
-  # platform.vals <- mget(c("snp.freqs", "dbSNP.annot", "snp.annot", "post.birdseed.calibration"), env=platform.annots[[genome.build]])
-  if (verbose) print(paste("Using plaform values from:", platform.vals.fn, "with platform set to:", platform))
-  platform.vals <- readRDS(platform.vals.fn)
-
+  data(list=GetPlatformDataName(platform), package="HAPSEG")
+  if (! genome.build %in% names(platform.annots)) {
+    stop("Unsupported genome build, ", genome.build,
+      ", for this platform: ", platform)
+  }
+  platform.vals <- mget(c("snp.freqs", "dbSNP.annot", "snp.annot", "post.birdseed.calibration"), env=platform.annots[[genome.build]])
   snp.freqs <- platform.vals[["snp.freqs"]]
   dbSNP.annot <- platform.vals[["dbSNP.annot"]]
   snp.annot <- platform.vals[["snp.annot"]]
   post.birdseed.calibration <- platform.vals[["post.birdseed.calibration"]]
-  
+
 
   # seg.dat = CreateMergedSegFile( array.seg.fn , capseg.seg.fn)
 
@@ -160,11 +157,11 @@ ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.po
   }
 	
   if (!is.null(capseg.probe.fn)) {
-  	capseg.d <- capseg.file.parser(capseg.probe.fn, drop.x, drop.y)
-  	germline.hets <- germline.het.file.parser(germline.het.fn)
+  	capseg.d = capseg.file.parser(capseg.probe.fn)
+  	germline.hets = germline.het.file.parser(germline.het.fn, tumor.sample.barcode)
       
   }
-
+	
 	as.res <- GetAlleleSegData(snp.d, cn.d, capseg.d, germline.hets, snp.annot, glad.mat=seg.dat,
    snp.freqs, use.pop, use.normal,
    normal, NA, dbSNP.annot, impute.gt,
@@ -174,14 +171,16 @@ ExtractProbeDat <- function(array.name, capseg.sample.name, genome.build, use.po
 }
 
 
-CreateMergedSegFile <- function(array.seg.fn, array.name, capseg.seg.fn, capseg.sample.name, drop.x, drop.y, verbose=FALSE) {
+CreateMergedSegFile <- function(array.seg.fn, capseg.seg.fn, drop.x, drop.y) {
   # Output seg file is a seg file from the union of breakpoints of the input seg files.
 
   if (!is.null(array.seg.fn)) {
-    array.seg.dat <- ReadGladMat(array.seg.fn, array.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, type="snp", verbose=verbose)[[1]]
+    array.seg.dat <- ReadGladMat(seg.fn, array.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, type="snp", 
+      verbose=verbose)[[1]]
   }
   if (!is.null(capseg.seg.fn)) {
-    capseg.seg.dat <- ReadGladMat(capseg.seg.fn, capseg.sample.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, type="capseg", verbose=verbose)[[1]]
+    capseg.seg.dat <- ReadGladMat(capseg.seg.fn, capseg.sample.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, 
+      type="capseg", verbose=verbose)[[1]]
   } 
 
 
