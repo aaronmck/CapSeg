@@ -140,7 +140,8 @@ create.dir.if.missing(qc.report.directory)
 normal.data = qc.normal.samples(normal.data, tumor.data, baits.filtered, qc.report.directory, allowed.normal.dev=0.3, allowed.normal.arm.dev=0.5)
 
 # create sex calls (guesses) for each individual
-sex.calls = create.sex.assignments(tumor.data,normal.data,sample.table,baits.filtered,"Y","X")
+samples = read.delim(sample.table,sep="\t")
+sex.calls = create.sex.assignments(tumor.data,normal.data,samples,baits.filtered,"Y","X")
 # and write this table out
 write.table(sex.calls,file=paste(output.location,"sex.calls.txt",sep="/"),sep="\t",quote=F,row.names=F)
 
@@ -172,4 +173,4 @@ save.off.processed.data(log2(normal.data),log2(tumor.data),calibrated.tumors,bai
 output.and.plot.data(calibrated.tumors,tumor.data,baits,output.location,signal.files)
 
 # output metrics for each sample
-create.sample.metric.files(calibrated.tumors,log.tumors,output.location)
+create.sample.metric.files(calibrated.tumors,log2(tumor.data),output.location)

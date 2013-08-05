@@ -18,25 +18,23 @@ qc.normal.samples = function(normal.data, tumor.data, baits.filtered, qc.report.
   
   normal.mean = as.data.frame(cbind(apply(normal.data,2,mean),"NORMAL"),stringsAsFactors=F)
   rownames(normal.mean) = paste(colnames(normal.data),"Normal",sep=".")
-  
   tumor.mean = as.data.frame(cbind(apply(tumor.data,2,mean),"TUMOR"),stringsAsFactors=F)
   rownames(tumor.mean) = paste(colnames(tumor.data),"Tumor",sep=".")
-  
   total.mean = as.data.frame(rbind(normal.mean,tumor.mean),stringsAsFactors=F)
+  
   colnames(total.mean) <- c("mean","type")
   rownames(total.mean) <- c(paste(colnames(normal.data),"Normal",sep="."),paste(colnames(tumor.data),"Tumor",sep="."))
   total.mean = transform(total.mean, mean = as.numeric(mean))
   
-  normal.cr.plt = ggplot(total.mean,aes(x=mean,y=rownames(total.mean),col=type)) + geom_point() + theme_bw()
-  ggsave(normal.cr.plt,file=paste(qc.report.directory,"normal_copy_ratio.jpg",sep="/"))
-  print(summary(total.mean))
+  #normal.cr.plt = ggplot(total.mean,aes(x=mean,y=rownames(total.mean),col=type)) + geom_point() + theme_bw()
+  #ggsave(normal.cr.plt,file=paste(qc.report.directory,"normal_copy_ratio.jpg",sep="/"))
   # now exclude any normal where it's CR value is way out of line, one plus or minus allowed.normal.dev
   normal.excluded = total.mean[total.mean$type=="NORMAL" & abs(1.0 - total.mean$mean) > allowed.normal.dev, ]
   normal.data <- normal.data[,!is.element(paste(colnames(normal.data),"Normal",sep="."),rownames(normal.excluded))]
   
   # now mean center the data for the arm level check -- if we see greater deviation that expected at the arm level, drop that sample
   normal.data = sweep(normal.data,2,apply(normal.data,2,mean),"/")
-  print(summary(total.mean))
+  
   # now exclude any normals where the arm level copy ratio of any arm exceeds our threshold
   total.mean <- cbind(total.mean,0.0)
   colnames(total.mean) <- c("mean","type","arm.dev")
@@ -68,7 +66,7 @@ qc.normal.samples = function(normal.data, tumor.data, baits.filtered, qc.report.
     }
   }
   arm.movement = ggplot(total.mean,aes(arm.dev,fill=type)) + geom_density(alpha=0.8)
-  ggsave(normal.cr.plt,file=paste(qc.report.directory,"normal_arm_ratio.jpg",sep="/"))
+  ggsave(arm.movement,file=paste(qc.report.directory,"normal_arm_ratio.jpg",sep="/"))
   
   # throw out any normals with arm level events that deviate from CR 1 by more than 0.5
   
