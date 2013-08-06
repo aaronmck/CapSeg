@@ -48,9 +48,11 @@ CaptureHscrSegFit <- function(h.seg.dat, tol=1e-5, verbose=verbose)
 
    mu.minor = wes.f[,"f.hat"] * tau
    mu.major = (1-wes.f[,"f.hat"]) * tau
-
+   jpeg("compare.jpeg", 7, 5, units="in", type="cairo", res=200, quality=100)
+   par(pty="s")
+   plot( 0, type='n', xlim=c(-6.9,-0.69), ylim=c(-6.9,-0.69), main="New vs. Old" )
    seg.sems <- CalcAllelicSegSEMs(h.seg.dat, wes.f[,"f.hat"], wes.f[, "p.H0"], tau, Theta)
-
+   dev.off()
    mus = cbind( "mu1"=mu.minor, "mu2"=mu.major, tau, seg.sems )
    
 ##? Do we need the delta / tau stuff?
@@ -59,7 +61,7 @@ CaptureHscrSegFit <- function(h.seg.dat, tol=1e-5, verbose=verbose)
    delta.tau.sd <- data.frame(delta=mus[,"sigma1"]^2 + mus[,"sigma2"]^2, tau=mus[,"sigma3"])
 
    out <- list(delta.tau=delta.tau, delta.tau.sd=delta.tau.sd, Theta=Theta, wes.f=wes.f, cap.e.mu=mus, "het.phase.prob"=het.phase.prob )
-
+   
    return(out)
 }
 

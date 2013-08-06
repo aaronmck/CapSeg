@@ -39,15 +39,36 @@ CalcAllelicSegSEMs <- function(h.seg.dat, f.hat, f.p.H0, tau, Theta)
       n <- 10000
       n.H0 <- round(n * f.p.H0[i])
       H0.f.sample <- rep(0.5, n.H0)
-      H1.f.sample <- rbeta(n - n.H0, ab$alpha[i], ab$beta[i])
+      alt <- h.seg.dat[["gh.wes.allele.d"]][[i]]["alt", ]
+      ref <- h.seg.dat[["gh.wes.allele.d"]][[i]]["ref", ]
+      probMat <- ProbVector(alt, ref, Theta)
+      x <- probMat[1,]
+      vect <- probMat[2,]
+      #mm = rmultinom(n - n.H0, length(vect), vect)
+      H1.f.sample <- x[ unlist(apply(rmultinom(n - n.H0, 1, vect)==1, 2, which)) ]
+      #Replaced beta sample with normalized grid
+      #H1.f.sample <- rbeta(n - n.H0, ab$alpha[i], ab$beta[i])
       f.sample <- c(H0.f.sample, H1.f.sample)[sample.int(n, n)] # mix up sample
       tau.sample <- rnorm(n, mean=mu.hat, sd=sigma.mu)
       sample.minor <- f.sample * tau.sample 
-      sample.major <- (1 - f.sample) * tau.sample
+      #sample.major <- (1 - f.sample) * tau.sample
 #      mu.minor <- mean(sample.minor)
 #      mu.major <- mean(sample.major)
       sigma.minor <- sd(sample.minor)
-      sigma.major <- sd(sample.major)
+
+
+      ##Compare new and Bryan code
+      H1.f.sampleB <- rbeta(n - n.H0, ab$alpha[i], ab$beta[i])
+      f.sample <- c(H0.f.sample, H1.f.sampleB)[sample.int(n, n)] # mix up sample
+      tau.sample <- rnorm(n, mean=mu.hat, sd=sigma.mu)
+      sample.minor <- f.sample * tau.sample
+      sigma.minorB <- sd(sample.minor)
+      points(log(sigma.minor),log(sigma.minorB))
+
+
+      #sigma.major <- sd(sample.major)
+      sigma.major <- sigma.minor
+      #stop()
       
       result[i,] = c(sigma.minor, sigma.major, sigma.mu)
    }
@@ -55,7 +76,18 @@ CalcAllelicSegSEMs <- function(h.seg.dat, f.hat, f.p.H0, tau, Theta)
    return(result)
 }
 
-
+ProbVector <- function(alt, ref, Theta, dx=1e-3) {
+	 prior <- 2
+	 likelihood <- function(x) 
+		sapply(x, function(x) CalcCaptureSegAllelicLogLik(alt, ref, f=x, Theta))
+   	 post.numerator <- function(x) sapply(x, function(x) log(prior) + likelihood(x) )
+	 x <- seq(0, 0.5, by=dx)
+	 y <- post.numerator(x)
+	 norm.const <- LogAdd(y+log(dx))
+	 vect <- (y-norm.const)
+	 vect <- exp(vect)
+	 return(rbind(x,vect))
+}
 
 CalcExpectedAlphaBeta <- function(h.seg.dat, f.hat, Theta) { 
 

@@ -3,7 +3,8 @@ PlotAllCapture <- function(res, save = F, plots.dir)
 {
    CalcIntensityLims <- function(probe.type) {
        all.d = list()
-       all.d[["capseg"]] = c(res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i]], res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i+1]])
+       if(!chr.unique){all.d[["capseg"]] = c(res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i]], res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i+1]])}
+       else {all.d[["capseg"]] = c(res[["as.res"]][["h.seg.dat"]][["h.capseg.d"]][[i]])}
        medians = lapply(all.d, median )
             
        if (!is.na(medians[[probe.type]])) 
@@ -28,36 +29,82 @@ PlotAllCapture <- function(res, save = F, plots.dir)
 
    dir.create(plots.dir, recursive=TRUE)
    cat("Plotting segs:")
-   for( i in 1:(length(res[["as.res"]][["h.seg.dat"]][[1]]) -1)) 
+   #stop()
+   #res[["as.res"]][["h.seg.dat"]][[1]]=res[["as.res"]][["h.seg.dat"]][[1]][c(1:50)]
+   #res[["as.res"]][["h.seg.dat"]][[2]]=res[["as.res"]][["h.seg.dat"]][[2]][c(1:50)]
+   #res[["as.res"]][["h.seg.dat"]][[3]]=res[["as.res"]][["h.seg.dat"]][[3]][c(1:50)]
+   #res[["as.res"]][["h.seg.dat"]][[4]]=res[["as.res"]][["h.seg.dat"]][[4]][c(1:50)]
+   #stop()
+   seg.len = length(res[["as.res"]][["h.seg.dat"]][[1]])
+   nam.width = nchar(seg.len)
+   curr.final = 1
+   if( sum(sapply(res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]],"[[",1)==
+	res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[seg.len]][["chr"]] ) == 1 )
+	{final.chr.break = 0}
+   else {final.chr.break = 1}
+   for( i in 1:(seg.len - final.chr.break)) 
    { 
-      if (res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][["chr"]] != res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][["chr"]]) 
+      if( i==seg.len ){curr.final = 0}
+      chr.unique=FALSE
+      chr.segi = res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][["chr"]]
+      if (chr.segi != res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+curr.final]][["chr"]]
+      	   & sum(sapply(res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]],"[[",1)==chr.segi) != 1) 
       {
          next 
       }
-
-      genomic.limits = range(c(res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][['pos']]))
+      else if (sum(sapply(res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]],"[[",1)==chr.segi) 
+	   == 1) {chr.unique = TRUE}
+      if(!chr.unique){genomic.limits = range(c(res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][['pos']], res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i+1]][['pos']]))}
+      else {genomic.limits = c(head(res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][['pos']]
+	, 1), tail(res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][['pos']], 1))}
       genomic.limits = genomic.limits / 1e6
    
       cat( paste(i, ".", sep=""))
 
       ilim = CalcIntensityLims("capseg")
 
-      plot.fn = file.path( plots.dir, paste("Segs_", i,"_",i+1, ".jpeg", sep=""))
-      jpeg(plot.fn, 7, 5, units="in", type="cairo", res=200, quality=100)
+      if( !chr.unique )
+      {
+        plot.fn = file.path( plots.dir, paste("Segs_", 
+		formatC(i, width=nam.width, flag="0"), "_", 
+		formatC(i+1, width=nam.width, flag="0"), ".jpeg", sep=""))
+        jpeg(plot.fn, 7, 5, units="in", type="cairo", res=200, quality=100)
+        par(mfrow=c(2,3))
+        ScarterPar()	
 
-      par(mfrow=c(2,3))
-      ScarterPar()
-      PlotCapIntensities(i, res, genomic.limits, ilim, use.capseg.mean=F, draw.legend=F)
-      PlotCapsegSegfit(i, res, d.col="coral", min=ilim[1], max=ilim[2], plot=T)
-      PlotCapsegSegfit(i+1, res, d.col="dodgerblue", min=ilim[1], max=ilim[2], plot=T)
+	PlotCapIntensities(i, res, genomic.limits, ilim, use.capseg.mean=F, draw.legend=F, chr.unique)
+	PlotCapsegSegfit(i, res, d.col="coral", min=ilim[1], max=ilim[2], plot=T)
+	PlotCapsegSegfit(i+1, res, d.col="dodgerblue", min=ilim[1], max=ilim[2], plot=T)
 
-      Plot_allelic_fraction_vs_genome( i, res, genomic.limits )
+	Plot_allelic_fraction_vs_genome(i, res, genomic.limits, chr.unique)
 
-      PlotFFit(i, res, conf=.95, plot=T )
-      PlotFFit(i+1, res, conf=.95, plot=T )
+	PlotFFit(i, res, conf=.95, plot=T )
+	PlotFFit(i+1, res, conf=.95, plot=T )
 
-#      Plot_het_AF_vs_cov(i, res)
+	#      Plot_het_AF_vs_cov(i, res)
+       }
+       else 
+       {
+	plot.fn = file.path( plots.dir, paste("Segs_", 
+		formatC(i, width=nam.width, flag="0"), "_only", ".jpeg", sep=""))
+        jpeg(plot.fn, 7, 5, units="in", type="cairo", res=200, quality=100)
+        par(mfrow=c(2,3))
+        ScarterPar()
 
+	PlotCapIntensities(i, res, genomic.limits, ilim, use.capseg.mean=F, 
+		draw.legend=F, chr.unique)
+	
+	PlotCapsegSegfit(i, res, d.col="coral", min=ilim[1], max=ilim[2], plot=T)
+	plot(0, type="n", main=paste("No breakpoints on chr ", chr.segi), xlab="Total copy ratio",
+		 ylab="Density", cex.main=.75)
+
+	Plot_allelic_fraction_vs_genome(i, res, genomic.limits, chr.unique)
+
+	PlotFFit(i, res, conf=.95, plot=T )
+	plot(0, type="n", main=paste("No breakpoints on chr ", chr.segi),
+		 xlab="Fraction of alternate read", ylab="Density", cex.main=.75)
+	#      Plot_het_AF_vs_cov(i, res)
+       }
       dev.off()
    }
 }
@@ -66,7 +113,7 @@ PlotAllCapture <- function(res, save = F, plots.dir)
 
 
 
-PlotCapIntensities <- function(i, res, genomic.limits, intensity.lim, use.capseg.mean=T, draw.legend=T) {
+PlotCapIntensities <- function(i, res, genomic.limits, intensity.lim, use.capseg.mean=T, draw.legend=T, chr.unique) {
     
    #########
    seg1.col = c("coral", "black")
@@ -74,18 +121,27 @@ PlotCapIntensities <- function(i, res, genomic.limits, intensity.lim, use.capseg
    seg.chr = res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][["chr"]]
    Theta = res[["capture.em.fit"]][["Theta"]]
    delta.tau = res[["capture.em.fit"]][["delta.tau"]]
-   
+
    pos1 = res[["as.res"]][['h.seg.dat']][["h.capseg.annot"]][[i]][["pos"]] / 1e6
-   pos2 = res[["as.res"]][['h.seg.dat']][["h.capseg.annot"]][[i+1]][["pos"]] / 1e6
-   int = c(res[["as.res"]][['h.seg.dat']][["h.capseg.d"]][[i]], res[["as.res"]][['h.seg.dat']][["h.capseg.d"]][[i+1]])
-   seg12 = data.frame(intensity=int, position=c(pos1, pos2), col=c(rep(seg1.col[1], length(pos1)), rep(seg2.col[1], length(pos2))), stringsAsFactors=F)
+   if(!chr.unique){pos2 = res[["as.res"]][['h.seg.dat']][["h.capseg.annot"]][[i+1]][["pos"]] / 1e6
+   	;int = c(res[["as.res"]][['h.seg.dat']][["h.capseg.d"]][[i]], 
+	res[["as.res"]][['h.seg.dat']][["h.capseg.d"]][[i+1]])}
+   else {pos2 = NULL 
+	 ;int = res[["as.res"]][['h.seg.dat']][["h.capseg.d"]][[i]][1,]}
+   seg12 = data.frame(intensity=int, position=c(pos1, pos2), 
+	col=c(rep(seg1.col[1], length(pos1)), rep(seg2.col[1], length(pos2))), stringsAsFactors=F)
    
    XLAB = paste("Chromosome ", seg.chr, " position (MB)", sep="")
-   if (nrow(seg12) == 0) {
-      plot(1, type="n", xlab=XLAB, ylab="Total copy ratio", xlim=genomic.limits, ylim=intensity.lim, main=paste("Segs", i, "and", i+1))
+   if (nrow(seg12) == 0 & !chr.unique) {
+      plot(1, type="n", xlab=XLAB, ylab="Total copy ratio", xlim=genomic.limits, 
+	  ylim=intensity.lim, main=paste("Segs", i, "and", i+1))
       return()
    }
-
+   else if (nrow(seg12) == 0) {
+      plot(1, type="n", xlab=XLAB, ylab="Total copy ratio", xlim=genomic.limits,
+          ylim=intensity.lim, main=paste("Seg", i))
+      return()
+   }
    seg12$intensity = pmin(intensity.lim[2], pmax(intensity.lim[1], seg12$intensity))
    
    # main = ifelse(!is.null(res[["seg.dat"]][i,"GC.Content"]), 
@@ -94,14 +150,19 @@ PlotCapIntensities <- function(i, res, genomic.limits, intensity.lim, use.capseg
    #             "Seg2 GC: ", round(res[["seg.dat"]][["seg.info"]][i+1,"GC.Content"], 2)),      
    #       paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1))
 
-   main = paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1)
-   
-   plot(seg12$position, seg12$intensity, pch=19, col=seg12$col, cex=.4, main=main, xlab=XLAB, ylab="Total copy ratio", ylim = intensity.lim, xlim=genomic.limits)
-   
+   if(!chr.unique){main = paste("Capseg Chr:", seg.chr, "Segments: ", i, "and", i+1)}
+   else {main = paste("Capseg Chr:", seg.chr, "Segment: ", i)}
+   #if(i==35){stop()}
+   if(!chr.unique){plot(seg12$position, seg12$intensity, pch=19, col=seg12$col, cex=.4, main=main,
+	 xlab=XLAB, ylab="Total copy ratio", ylim = intensity.lim, xlim=genomic.limits)}
+   else{
+     plot(pos1, res[["as.res"]][['h.seg.dat']][["h.capseg.d"]][[i]], pch=19, col=seg1.col[1], 
+	cex=.4, main=main, xlab=XLAB, ylab="Total copy ratio", ylim = intensity.lim, 
+	xlim=genomic.limits)}
    atten.tau1 = AffyAtten(delta.tau[i, 2], Theta[["at.capseg"]])
-   atten.tau2 = AffyAtten(delta.tau[i+1, 2], Theta[["at.capseg"]])
+   if(!chr.unique){atten.tau2 = AffyAtten(delta.tau[i+1, 2], Theta[["at.capseg"]])}
    lines(range(pos1), rep(atten.tau1, 2), col=seg1.col[2], lwd=1, lty=2)
-   lines(range(pos2), rep(atten.tau2, 2), col=seg2.col[2], lwd=1, lty=2)
+   if(!chr.unique){lines(range(pos2), rep(atten.tau2, 2), col=seg2.col[2], lwd=1, lty=2)}
    
    if (draw.legend) {
       legend("topright", legend=c("SNP-derived Mu3", "Capseg Mean"), lty=c(1, 4), lwd=3)
@@ -113,8 +174,8 @@ PlotCapIntensities <- function(i, res, genomic.limits, intensity.lim, use.capseg
 PlotCapsegSegfit <- function(i, res, d.col, min=NULL, max=NULL, plot=T) 
 {
    h.d = res[['as.res']][["h.seg.dat"]][["h.capseg.d"]][[i]]
-   tau = res[['capture.em.fit']][["delta.tau"]][i, 2]
-   Theta = res[['capture.em.fit']][["Theta"]]
+   tau = res[["capture.em.fit"]][["delta.tau"]][i, 2]
+   Theta = res[["capture.em.fit"]][["Theta"]]
 #   array.name = basename(RESULTS.DIR)
    array.name = ""
    
@@ -166,7 +227,7 @@ PlotFFit <- function( i, res, conf=.95, plot=FALSE ) {
 
    h.seg.dat = res[["as.res"]][["h.seg.dat"]]
    wes.f = res[["capture.em.fit"]][["wes.f"]][i,]
-   Theta = res[['capture.em.fit']][["Theta"]]
+   Theta = res[["capture.em.fit"]][["Theta"]]
    d = h.seg.dat[["gh.wes.allele.d"]][[i]]
    het.phase.prob = res[["capture.em.fit"]][["het.phase.prob"]][[i]]
 
@@ -192,19 +253,29 @@ PlotFFit <- function( i, res, conf=.95, plot=FALSE ) {
    ref = d["ref",]
 #   alt.phase.prob = CapturePhaseProb( alt, ref, f.hat, Theta)[,1]
 
-   e.alpha.seg = 1 + sum(alt * het.phase.prob) + sum(ref * (1 - het.phase.prob))
-   e.beta.seg = 1 + sum(ref * het.phase.prob) + sum(alt * (1 - het.phase.prob))
+   #e.alpha.seg = 1 + sum(alt * het.phase.prob) + sum(ref * (1 - het.phase.prob))
+   #e.beta.seg = 1 + sum(ref * het.phase.prob) + sum(alt * (1 - het.phase.prob))
 
-   e.mode = (e.alpha.seg-1)/(e.alpha.seg + e.beta.seg - 2) ## mode loc
-   d.mode = dbeta( e.mode, e.alpha.seg, e.beta.seg) ## density at mode
+   #e.mode = (e.alpha.seg-1)/(e.alpha.seg + e.beta.seg - 2) ## mode loc
+   #d.mode = dbeta( e.mode, e.alpha.seg, e.beta.seg) ## density at mode
 
-   seg.crds = paste(paste(round(range(h.seg.dat[["gh.wes.allele.annot"]][[i]][['pos']]) / 1e6, 2), collapse="-"), "MB")
-   curve( dbeta(x, e.alpha.seg, e.beta.seg) , from=0, to=1, n=1001, add=FALSE, col= post.col, xlab=paste("Fraction of alternate reads \n",  seg.crds), ylab="Density", ylim=c(0,d.mode))
+   probMat=ProbVector(alt, ref, Theta, dx=1e-2)
+   x = probMat[1,]
+   vect = probMat[2,]
+   d.mode=max(vect)
+
+   seg.crds = paste(paste(round(range(h.seg.dat[["gh.wes.allele.annot"]][[i]][["pos"]]) / 1e6, 2), collapse="-"), "MB")
+   #curve( dbeta(x, e.alpha.seg, e.beta.seg) , from=0, to=1, n=1001, add=FALSE, col= post.col, xlab=paste("Fraction of alternate reads \n",  seg.crds), ylab="Density", ylim=c(0,d.mode))
+   plot( 0, type='n', xlab=paste("Fraction of alternate reads \n",  seg.crds), ylab="Density", ylim=c(0,d.mode), xlim=c(0,1) )
+
+   # xlab=paste("Fraction of alternate reads \n",  seg.crds), ylab="Density", ylim=c(0,d.mode)
+ 
+   lines( x, vect, col=post.col )
+   #stop()
+   #lb = qbeta((1 - conf) / 2, e.alpha.seg, e.beta.seg)
+   #ub = qbeta((1 + conf) / 2, e.alpha.seg, e.beta.seg)
    
-   lb = qbeta((1 - conf) / 2, e.alpha.seg, e.beta.seg)
-   ub = qbeta((1 + conf) / 2, e.alpha.seg, e.beta.seg)
-   
-   abline(v=c(lb, ub), col=conf.col)
+   #abline(v=c(lb, ub), col=conf.col)
    abline(v=c(f.hat, 1-f.hat), col=f.hat.col, lwd=3, lty=3) 
 
    A1 = Theta[["f_skew"]] * f.hat
@@ -254,7 +325,7 @@ Plot_het_AF_vs_cov = function(i, res)
 
 
 
-Plot_allelic_fraction_vs_genome = function( i, res, genomic.limits )
+Plot_allelic_fraction_vs_genome = function(i, res, genomic.limits, chr.unique)
 {
    draw_fit_lines = function( pos, f.hat, Theta )
    {
@@ -267,31 +338,40 @@ Plot_allelic_fraction_vs_genome = function( i, res, genomic.limits )
    }
 
    h.seg.dat = res[["as.res"]][["h.seg.dat"]]
-   Theta = res[['capture.em.fit']][["Theta"]]
+   Theta = res[["capture.em.fit"]][["Theta"]]
    d1 = h.seg.dat[["gh.wes.allele.d"]][[i]]
-   d2 = h.seg.dat[["gh.wes.allele.d"]][[i+1]]
+   if(!chr.unique){d2 = h.seg.dat[["gh.wes.allele.d"]][[i+1]]}
+   else {d2=NULL}
    d = cbind(d1,d2)
    seg.chr = res[["as.res"]][["h.seg.dat"]][["h.capseg.annot"]][[i]][["chr"]]
 
    f.hat.1 = res[["capture.em.fit"]][["wes.f"]][i,"f.hat"]
-   f.hat.2 = res[["capture.em.fit"]][["wes.f"]][i+1,"f.hat"]
+   if(!chr.unique){f.hat.2 = res[["capture.em.fit"]][["wes.f"]][i+1,"f.hat"]}
 
-   if (length(d1) == 0 ) 
+   if (length(d1) == 0 & length(d2) == 0 ) 
    {
-      array.name = ""
-      plot(0, type="n", main=paste("No Data for seg", i, "\n", array.name), cex.main=.75)
-      return()
+      if (!chr.unique){
+      	plot(0, type="n", main=paste("No Data for segs", i, "and", i+1, "\n", ""), cex.main=.75)
+      	return()
+      }
+      else {
+        plot(0, type="n", main=paste("No Data for seg", i, "\n", ""), cex.main=.75)
+        return()
+      }
    }
-
-   if (length(d2) > 0 ) 
+   if (length(d1) == 0 & length(d2) > 0 ) 
+   {
+      het.mat = res[["capture.em.fit"]][["het.phase.prob"]][[i+1]]
+   }
+   else if (length(d2) == 0 & length(d1) > 0 )
+   {
+      het.mat = res[["capture.em.fit"]][["het.phase.prob"]][[i]]
+   }
+   else
    {
       het.mat.1 = res[["capture.em.fit"]][["het.phase.prob"]][[i]]
       het.mat.2 = res[["capture.em.fit"]][["het.phase.prob"]][[i+1]] 
       het.mat = rbind(het.mat.1, het.mat.2)
-   }
-   else 
-   {
-      het.mat = res[["capture.em.fit"]][["het.phase.prob"]][[i]]
    }
 
    het.out = het.mat[,3]
@@ -302,11 +382,13 @@ Plot_allelic_fraction_vs_genome = function( i, res, genomic.limits )
 
 
    crds1 = h.seg.dat[["gh.wes.allele.annot"]][[i]][['pos']] / 1e6
-   crds2 = h.seg.dat[["gh.wes.allele.annot"]][[i+1]][['pos']] / 1e6
+   if(!chr.unique){crds2 = h.seg.dat[["gh.wes.allele.annot"]][[i+1]][['pos']] / 1e6}
+   else {crds2 = NULL}
    het.crds = c(crds1, crds2)
 
    pos1 = res[["as.res"]][['h.seg.dat']][["h.capseg.annot"]][[i]][["pos"]] / 1e6
-   pos2 = res[["as.res"]][['h.seg.dat']][["h.capseg.annot"]][[i+1]][["pos"]] / 1e6
+   if(!chr.unique){pos2 = res[["as.res"]][['h.seg.dat']][["h.capseg.annot"]][[i+1]][["pos"]] / 1e6}
+   else {pos2 = NULL}
    seg.crds = c(pos1, pos2)
 
    alt= d["alt",] 
@@ -347,7 +429,7 @@ Plot_allelic_fraction_vs_genome = function( i, res, genomic.limits )
    points( het.crds[out.ix], (alt/cov)[out.ix], col=het.col[out.ix], pch=use.pch[out.ix], cex=0.75 )
 
    draw_fit_lines( pos1, f.hat.1, Theta )
-   draw_fit_lines( pos2, f.hat.2, Theta )
+   if(!chr.unique){draw_fit_lines( pos2, f.hat.2, Theta )}
 
 
 if( FALSE )
