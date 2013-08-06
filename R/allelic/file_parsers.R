@@ -1,23 +1,16 @@
-DefaultGermlineHetFileParser = function(germline.het.fn, tumor.sample.barcode) {
-	try.status = try( {out <- readRDS(germline.het.fn) ; out = out[out$Tumor_Sample_Barcode == tumor.sample.barcode, ]}, silent=TRUE)
-	if (inherits(try.status, "try-error")) {
-		out = read.delim(germline.het.fn, strings=F, skip=1)
-	}
+
+DefaultGermlineHetFileParser = function(germline.het.fn) {
+   dat = read.delim(germline.het.fn, stringsAsFactors=FALSE, check.names=FALSE, blank.lines.skip=TRUE, comment.char="#")
+
 		
-	if (nrow(out) == 0) stop(paste(tumor.sample.barcode, "was not found in the PanCancer Germline Het table."))
-		
-#	out$stub = apply(out[, c("Chromosome", "Start_position", "Hugo_Symbol")], 1, function(x) paste(trim(x), collapse="_"))
-#	num.non.dups = table(duplicated(out$stub))["FALSE"]
-#	if (num.non.dups != nrow(out)  ) {
-#		warning (paste("There were dups for Tumor_Sample_Barcode:", tumor.sample.barcode, ". Removing and proceeding."))
-#		out = out[!duplicated(out$stub), ]
-#	}
-	if (!all((out$Start_position == out$End_position))) stop (paste("There's something wrong with the Germline Het Table."))
-	out$Chromosome = as.character(gsub("Y", "24", gsub("X", "23", out$Chromosome)))
-	return(out)
+   if (!all((dat$Start_position == dat$End_position))) stop (paste("There's something wrong with the Germline Het Table."))
+
+   dat$Chromosome = as.character(gsub("Y", "24", gsub("X", "23", dat$Chromosome)))
+
+   return(dat)
 }
 
-DefaultCapsegFileParser = function(capseg.probe.fn, drop.y=TRUE) {
+DefaultCapsegFileParser = function(capseg.probe.fn, drop.x, drop.y) {
 	
 	capseg.d = read.delim(capseg.probe.fn, strings=F)
 	rownames(capseg.d) <- capseg.d[,1]
@@ -38,7 +31,7 @@ DefaultCapsegFileParser = function(capseg.probe.fn, drop.y=TRUE) {
 	return(capseg.d)
 }
 
-DefaultSnpFileParser <- function(snp.fn, verbose=FALSE) {
+DefaultSnpFileParser <- function(snp.fn, sample.name=NULL, verbose=FALSE) {
   snp.try <- try(load(snp.fn), silent=TRUE)
   ## FIXME: Some of Scott's old data uses RData inputs instead of
   ## text snp files. These are already diced per-sample and don't need

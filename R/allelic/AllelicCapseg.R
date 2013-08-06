@@ -10,11 +10,13 @@ AllelicCapseg = function( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, 
   # drop.x <- FALSE
   # drop.y <- TRUE
   # verbose=TRUE
+
    RESULTS.DIR=file.path(base.output.dir, "results" ); dir.create(RESULTS.DIR, recurs=TRUE, showWarnings=FALSE)
    plots.dir=file.path(base.output.dir, "plots", SID ); dir.create(plots.dir, recurs=TRUE, showWarnings=FALSE)
 
 
    result_FN = file.path(base.output.dir, paste(SID, ".AllelicCapseg.rds", sep="") )
+
  ## tmp.names is needed because the ReadGladMat parser requires the sample name corresponding to the rows it will extract so that it can pull single samples out of merged seg files.  However sometimes hyphens get mutated into dots and dumb stuff like that.  So tmp.name is what is actually in the seg file.
    tmp.name <- read.delim(capseg.seg.fn, stringsAsFactors=FALSE, check.names=FALSE)$Sample[1]
    seg.dat <- as.data.frame(ReadGladMat(capseg.seg.fn, sample.name=tmp.name, glad.log=TRUE, drop.x=drop.x, drop.y=drop.y, type="capseg", verbose=verbose)[[1]], stringsAsFactors=FALSE)
@@ -30,10 +32,10 @@ AllelicCapseg = function( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, 
 ## Run model-fitting algorithm
       iams.res <- cap.dat
 
-    ## provisional fit
+    ## provisional fit 
       iams.res[["capture.em.fit"]] <- CaptureHscrSegFit(iams.res[["as.res"]][["h.seg.dat"]], tol=1e-2, verbose=verbose)
     ## merge close segs
-      merge.res = JoinCloseSegsCapture( iams.res[["as.res"]][["h.seg.dat"]], iams.res[["capture.em.fit"]], merge.thresh=seg.merge.thresh, verbose=verbose)
+      merge.res = JoinCloseSegsCapture( iams.res[["as.res"]][["h.seg.dat"]], iams.res[["capture.em.fit"]], merge.thresh=seg.merge.thresh, verbose=verbose) 
       iams.res[["as.res"]][["h.seg.dat"]]=merge.res[["h.seg.dat"]]
       iams.res[["merged.segtab"]] = CreateSegTabFromHSegDat(iams.res[["as.res"]][["h.seg.dat"]])
 
@@ -41,17 +43,17 @@ AllelicCapseg = function( capseg.probe.fn, capseg.seg.fn, germline.het.fn, SID, 
     ## final model fit
       iams.res[["capture.em.fit"]] <- CaptureHscrSegFit(iams.res[["as.res"]][["h.seg.dat"]], tol=1e-5, verbose=verbose)
 
-      saveRDS( iams.res, file=result_FN)
+      saveRDS( iams.res, file=result_FN)  
    } else
    {
-      iams.res = readRDS(result_FN)
+      iams.res = readRDS(result_FN) 
    }
 
-## Save output
+## Save output 
    out.tab <- AbsolutePostProcess(iams.res, iams.res[["merged.segtab"]])
    write.tab(out.tab, file=file.path(RESULTS.DIR, paste(SID, ".tsv", sep="")) )
 
-## Plotting ##
+## Plotting ## 
    # images are automatically saved in RESULTS.DIR / plots / subdir
    PlotAllCapture(iams.res, save=TRUE, plots.dir )
 }
