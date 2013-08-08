@@ -1,7 +1,8 @@
 
 DefaultGermlineHetFileParser = function(germline.het.fn) {
-   dat = read.delim(germline.het.fn, stringsAsFactors=FALSE, check.names=FALSE, blank.lines.skip=TRUE, comment.char="#")
-
+   print(paste("Loading the following germline het file:",germline.het.fn))
+   dat = read.csv(germline.het.fn, stringsAsFactors=FALSE, check.names=FALSE, blank.lines.skip=TRUE, comment.char="#")
+   # first check that the start and end position columns are as expected
 		
    if (!all((dat$Start_position == dat$End_position))) stop (paste("There's something wrong with the Germline Het Table."))
 
