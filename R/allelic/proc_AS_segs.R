@@ -490,7 +490,7 @@ GetAsSegs <- function(glad.mat, snp.d, cn.d, capseg.d, germline.hets, snp.gt.p, 
 }
 
 GetCaptureAsSegs <- function(glad.mat, capseg.d, germline.hets, verbose=FALSE) {
-
+    verbose = T
 	GetProbeIx <- function(i, probe.dat) {
 		(probe.dat[, 1] == glad.mat[i, "Chromosome"]) &
 					((probe.dat[, 2] >= glad.mat[i, "Start.bp"]) &
@@ -530,7 +530,9 @@ GetCaptureAsSegs <- function(glad.mat, capseg.d, germline.hets, verbose=FALSE) {
 	}
 	h.capseg.d = lapply(capseg.res, "[[", "h.capseg.d")
 	h.capseg.annot = lapply(capseg.res, "[[", "h.capseg.annot")
-	
+
+	print(summary(glad.mat))
+	print(summary(germline.hets))
 	# Germline Het Allele Counts
 	GetHetIx <- function(i, het.dat) {
 		(het.dat$Chromosome == glad.mat[i, "Chromosome"]) & (het.dat$Start_position >= glad.mat[i, "Start.bp"]) & (het.dat$Start_position <= glad.mat[i, "End.bp"])
@@ -540,7 +542,7 @@ GetCaptureAsSegs <- function(glad.mat, capseg.d, germline.hets, verbose=FALSE) {
 		raw.gh.seg <- germline.hets[gh.ix, c("i_t_ref_count", "i_t_alt_count"), drop=FALSE]
 		colnames(raw.gh.seg) <- c("ref", "alt")
 		
-		rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("Chromosome", "Start_position", "Hugo_Symbol"), drop=FALSE], 1, function(x) paste(gsub("^\\s+", "", gsub("\\s+$", "", x)), collapse="_"))
+		rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("Chromosome", "Start_position"), drop=FALSE], 1, function(x) paste(gsub("^\\s+", "", gsub("\\s+$", "", x)), collapse="_"))
 		
 		if (verbose) {
 			print(paste("Processing Segment: ", i, "Germline Het size = ", dim(raw.gh.seg)[1],
