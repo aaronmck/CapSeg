@@ -17,6 +17,7 @@ ReadGladMat <- function(glad.fn, sample.name=NULL, drop.x=TRUE, drop.y=TRUE, gla
   if (verbose) {
     print(paste("loading glad mat", glad.fn))
   }
+  
   glad.mat <- read.delim(glad.fn, row.names=NULL, as.is=TRUE)
   glad.mat[, 2] <- gsub("X", "23", glad.mat[, 2])
   glad.mat[, 2] <- gsub("Y", "24", glad.mat[, 2])
