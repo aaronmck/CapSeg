@@ -8,7 +8,7 @@ DefaultGermlineHetFileParser = function(germline.het.fn) {
    if (!all((dat$Start_position == dat$End_position))) stop (paste("There's something wrong with the Germline Het Table."))
 
    dat$Chromosome = as.character(gsub("Y", "24", gsub("X", "23", dat$Chromosome)))
-   print(summary(dat))
+
    return(dat)
 }
 

@@ -530,9 +530,7 @@ GetCaptureAsSegs <- function(glad.mat, capseg.d, germline.hets, verbose=FALSE) {
 	}
 	h.capseg.d = lapply(capseg.res, "[[", "h.capseg.d")
 	h.capseg.annot = lapply(capseg.res, "[[", "h.capseg.annot")
-
-	print(summary(glad.mat))
-	print(summary(germline.hets))
+	
 	# Germline Het Allele Counts
 	GetHetIx <- function(i, het.dat) {
 		(het.dat$Chromosome == glad.mat[i, "Chromosome"]) & (het.dat$Start_position >= glad.mat[i, "Start.bp"]) & (het.dat$Start_position <= glad.mat[i, "End.bp"])
