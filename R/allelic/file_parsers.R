@@ -1,7 +1,8 @@
 
 DefaultGermlineHetFileParser = function(germline.het.fn) {
-   dat = read.delim(germline.het.fn, stringsAsFactors=FALSE, check.names=FALSE, blank.lines.skip=TRUE, comment.char="#")
-
+   dat = read.csv(germline.het.fn, stringsAsFactors=FALSE, check.names=FALSE, blank.lines.skip=TRUE, comment.char="#")
+   colnames(dat) <- c("Chromosome","Start_position","i_t_ref_count","i_t_alt_count","aBase","bBase","dbSNPOrientation","referenceAlleleListed","referenceAllele")
+   dat$End_position <- dat$Start_position
 		
    if (!all((dat$Start_position == dat$End_position))) stop (paste("There's something wrong with the Germline Het Table."))
 

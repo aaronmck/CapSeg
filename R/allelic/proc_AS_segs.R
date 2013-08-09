@@ -467,7 +467,7 @@ GetAsSegs <- function(glad.mat, snp.d, cn.d, capseg.d, germline.hets, snp.gt.p, 
 		# change ref and alt names
 		colnames(raw.gh.seg) <- c("ref", "alt")
 
-		rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("Chromosome", "Start_position", "Hugo_Symbol"), drop=FALSE], 1, function(x) paste(gsub("^\\s+", "", gsub("\\s+$", "", x)), collapse="_"))
+		rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("Chromosome", "Start_position"), drop=FALSE], 1, function(x) paste(gsub("^\\s+", "", gsub("\\s+$", "", x)), collapse="_"))
 		
    		
 		if (verbose) {
@@ -477,7 +477,7 @@ GetAsSegs <- function(glad.mat, snp.d, cn.d, capseg.d, germline.hets, snp.gt.p, 
 							glad.mat[i, "Chromosome"], ifelse(dim(raw.gh.seg)[1]==0, ": No HETS", "")))
 		}
 		gh.wes.allele.d <- t(raw.gh.seg)
-		gh.wes.allele.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=germline.hets$Start_position[gh.ix], hugo.symbol=germline.hets$Hugo_Symbol[gh.ix], 
+		gh.wes.allele.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=germline.hets$Start_position[gh.ix],
 				ref.allele=germline.hets$Reference_Allele[gh.ix], alt.allele=germline.hets$Tumor_Seq_Allele1[gh.ix], dbSNP=germline.hets$dbSNP[gh.ix])
 		list(gh.wes.allele.d=gh.wes.allele.d, gh.wes.allele.annot=gh.wes.allele.annot)
 	}
@@ -540,7 +540,7 @@ GetCaptureAsSegs <- function(glad.mat, capseg.d, germline.hets, verbose=FALSE) {
 		raw.gh.seg <- germline.hets[gh.ix, c("i_t_ref_count", "i_t_alt_count"), drop=FALSE]
 		colnames(raw.gh.seg) <- c("ref", "alt")
 		
-		rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("Chromosome", "Start_position", "Hugo_Symbol"), drop=FALSE], 1, function(x) paste(gsub("^\\s+", "", gsub("\\s+$", "", x)), collapse="_"))
+		rownames(raw.gh.seg) = apply(germline.hets[gh.ix, c("Chromosome", "Start_position"), drop=FALSE], 1, function(x) paste(gsub("^\\s+", "", gsub("\\s+$", "", x)), collapse="_"))
 		
 		if (verbose) {
 			print(paste("Processing Segment: ", i, "Germline Het size = ", dim(raw.gh.seg)[1],
@@ -549,7 +549,7 @@ GetCaptureAsSegs <- function(glad.mat, capseg.d, germline.hets, verbose=FALSE) {
 							glad.mat[i, "Chromosome"], ifelse(dim(raw.gh.seg)[1]==0, ": No HETS", "")))
 		}
 		gh.wes.allele.d <- t(raw.gh.seg)
-		gh.wes.allele.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=germline.hets$Start_position[gh.ix], hugo.symbol=germline.hets$Hugo_Symbol[gh.ix], 
+		gh.wes.allele.annot <- list(chr=as.integer(glad.mat[i, "Chromosome"]), pos=germline.hets$Start_position[gh.ix],
 				ref.allele=germline.hets$Reference_Allele[gh.ix], alt.allele=germline.hets$Tumor_Seq_Allele1[gh.ix], dbSNP=germline.hets$dbSNP[gh.ix])
 		list(gh.wes.allele.d=gh.wes.allele.d, gh.wes.allele.annot=gh.wes.allele.annot)
 	}
