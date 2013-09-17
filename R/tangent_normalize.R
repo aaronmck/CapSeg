@@ -84,6 +84,9 @@ removeBadBaitsAndLanes = T # TRUE
 optimize.bf = F # optimize those baits!
 calibrate.against.others = T
 
+# our epsilon value - used to make sure we're not producing log(0) calls
+epsilon <- .Machine$double.eps * 10^6
+# options(error=dump.frames)
 
 if (build.version == "hg19") {
   sex.chromosomes = c("X","Y") # this should get loaded based on the platform
@@ -94,9 +97,6 @@ if (build.version == "hg19") {
 } else {
   print(paste("Unable to work with build version provided:",build.version,"expected hg18, hg19, mm9"))
 }
-# our epsilon value - used to make sure we're not producing log(0) calls
-epsilon <- .Machine$double.eps * 10^6
-# options(error=dump.frames)
 
 # create the output directory and the cache directory if needed, and setup some debug logging locations (used only if debug == T)
 create.dir.if.missing(output.location)
@@ -155,6 +155,8 @@ bait.factor = bait.factor[is.element(rownames(bait.factor),rownames(tumor.data))
 tumor.data = sweep(tumor.data,2,apply(tumor.data,2,mean),"/")
 
 # split into females and males
+tumor.data[abs(tumor.data) < epsilon] = epsilon
+normal.data[abs(normal.data) < epsilon] = epsilon
 male.tumors <- tumor.data[,is.element(colnames(tumor.data),sex.calls$sample[!as.logical(sex.calls$is.female)])]
 female.tumors <- tumor.data[,is.element(colnames(tumor.data),sex.calls$sample[as.logical(sex.calls$is.female)])]
 male.normals <- normal.data[,is.element(colnames(normal.data),sex.calls$sample[!as.logical(sex.calls$is.female)])]

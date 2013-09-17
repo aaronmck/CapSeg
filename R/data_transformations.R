@@ -75,10 +75,7 @@ calibrate.and.pi.tumors = function(tumor.data,normal.data) {
   # now calculate the tumor and normal tangents independently for each sex
   td.mean = apply(tumor.data,2,mean)
   tumor.data = tumor.data / td.mean
-  tumor.data[abs(tumor.data) < epsilon] = epsilon
   log.tumors = data.frame(log2(tumor.data))
-  
-  normal.data[abs(normal.data) < epsilon] = epsilon
   log.normals = data.frame(log2(normal.data))
   
   # do the initial block normalization
